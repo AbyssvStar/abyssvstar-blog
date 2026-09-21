@@ -63,3 +63,6 @@ pgdata/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# --- 其他 ---
+.obsidian/
