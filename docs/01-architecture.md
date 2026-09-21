@@ -163,7 +163,7 @@ GitHub Actions:
 
 ### 4.5 认证
 
-单管理员账号。密码 **BCrypt(cost=12)** 哈希（不引 BouncyCastle，理由见 §7.4）；会话存 Redis（HttpOnly + SameSite=Strict Cookie）配 CSRF token。**不做 JWT、不做 RBAC。**
+单管理员账号。密码 **BCrypt(cost=12)** 哈希；会话存 Redis（HttpOnly + SameSite=Strict Cookie）配 CSRF token。**不做 JWT、不做 RBAC。**
 
 ### 4.6 后台实时预览
 
@@ -211,7 +211,6 @@ GitHub Actions:
 | **全库只有 1 个 interface** | 没有第二个实现时，抽象是负债。见 §7.1.3 |
 | **图片处理用 JDK ImageIO** | 见 §7.3 |
 | **缩略图同步生成，不是异步** | 见 §7.3 |
-| **BCrypt 而非 Argon2id** | 见 §7.4 |
 | **后台实时预览** | 静态方案的发布延迟由预览补偿。见 §4.6 |
 | `post_publications` 快照表 | 见 `04-domain-rules.md` §2 |
 
@@ -277,7 +276,7 @@ post  note  comment  media  taxonomy  metrics  export  sitebuild  admin  shared 
 
 先纠正一个前提：**不是"每次发文章都构建"，是"每次发布构建"。**
 
-不触发构建的（完整规则见 `04-domain-rules.md` §11）：**自动保存**（每 30 秒一次）、私密内容的任何改动、阅读量变化。而且有 **30 秒防抖** —— 一次改 5 篇只构建一次。
+不触发构建的（完整规则见 `04-domain-rules.md` §11）：**自动保存**（每 30 秒一次）、私密内容的任何改动、**评论审核**、**标签改名**、阅读量变化。而且有 **30 秒防抖** —— 一次改 5 篇只构建一次。
 
 **关键事实：构建不在你的服务器上。** `next build` 跑在 GitHub Actions（免费、云端），2H4G 只负责接住 rsync 过来的静态文件。所以构建对服务器的成本是 **0**。
 
@@ -304,7 +303,7 @@ post  note  comment  media  taxonomy  metrics  export  sitebuild  admin  shared 
 
 **关于全量构建**：现在是全量，而且是刻意的。几十到一两百篇时，Next.js 全量 SSG 约 20–60 秒，跑在 CI 上。增量构建（ISR）需要**常驻 Node server**。真正该做的优化不是"增量"而是**分级**（内容页增量、索引页全量），**触发条件是全量构建超过 3–5 分钟**，约对应 500–1000 篇。
 
-**"静态"不等于"没有后端交互"**，边界见 `07-frontend.md` §5。判断标准只有一条：**这个数据在「一篇文章的生命周期」里会不会变。** 会变的走客户端（阅读量、评论、搜索、AI），不变的进 HTML。
+**"静态"不等于"没有后端交互"**，边界见 `07-frontend.md` §5。判断标准只有一条：**作者写的东西进 HTML，读者写的东西走接口** —— 文章、短动态进 HTML（换来 SEO 与最快首屏），评论、阅读量、搜索、AI 一律走客户端。
 
 ### 7.3 图片处理为什么用 JDK ImageIO
 
