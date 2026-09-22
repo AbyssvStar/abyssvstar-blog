@@ -1,6 +1,5 @@
 # 本地开发 profile：假设 docker compose up -d postgres redis 已经起好
 # 运行：  ./gradlew bootRun --args='--spring.profiles.active=local'
-#   或   SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 
 spring:
   datasource:
@@ -15,15 +14,12 @@ spring:
 
 blog:
   base-url: http://localhost:3000
-  upload-dir: ./data/uploads
   admin:
     username: admin
     password: local-dev-password
   session:
     # 本地是 http，Secure Cookie 会直接失效 —— 必须关掉
     secure: false
-  export:
-    token: local-dev-export-token
 
 logging:
   level:

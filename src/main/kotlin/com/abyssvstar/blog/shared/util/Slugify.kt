@@ -1,7 +1,7 @@
 package com.abyssvstar.blog.shared.util
 
 /**
- * slug 生成。设计依据 docs/02-data-model.md §2（slug 列）。
+ * slug 生成。
  *
  * 目标是「中文标题自动转拼音 + 可手动覆盖」，但**拼音转换需要额外依赖**
  * （pinyin4j / TinyPinyin），留到 G2 接入 —— [from] 是唯一需要改的地方。
