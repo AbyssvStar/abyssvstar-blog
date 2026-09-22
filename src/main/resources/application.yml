@@ -38,10 +38,17 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
 
-  servlet:
-    multipart:
-      max-file-size: 5MB
-      max-request-size: 6MB
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    banner: false
+    db-config:
+      # 主键交给数据库的 bigserial，不用雪花 ID
+      id-type: auto
+  # 目前只用注解式 mapper；留这个路径是为了将来复杂 SQL 可以放 XML
+  mapper-locations: classpath*:mapper/**/*.xml
 
 server:
   port: 8080
@@ -49,7 +56,6 @@ server:
   compression:
     enabled: true
     mime-types: application/json,text/html,text/css,application/javascript
-  # 前端由 Nginx 直发，后端的错误页只在 API 场景出现，统一走 envelope
   error:
     whitelabel:
       enabled: false
@@ -70,54 +76,21 @@ management:
 
 blog:
   base-url: ${BLOG_BASE_URL:http://localhost:3000}
-  upload-dir: ${BLOG_UPLOAD_DIR:/data/uploads}
-  site:
-    title: ${BLOG_SITE_TITLE:AbyssvStar}
-    description: ${BLOG_SITE_DESCRIPTION:}
-    author: ${BLOG_SITE_AUTHOR:AbyssvStar}
-    language: ${BLOG_SITE_LANGUAGE:zh-CN}
-  media:
-    max-bytes: ${BLOG_MEDIA_MAX_BYTES:5242880}
-    max-pixels: ${BLOG_MEDIA_MAX_PIXELS:40000000}
-    variant-widths: ${BLOG_MEDIA_VARIANT_WIDTHS:400,800}
-    # 只列 ImageIO 原生支持的格式。加 webp 需要先加 ImageIO 的 WebP 插件，
-    # 否则会把"能上传但处理不了"的文件放进系统。
-    allowed-formats: ${BLOG_MEDIA_ALLOWED_FORMATS:JPEG,PNG,GIF}
-    resize-parallelism: ${BLOG_MEDIA_RESIZE_PARALLELISM:2}
-    public-prefix: ${BLOG_MEDIA_PUBLIC_PREFIX:/uploads}
-  site-build:
-    # 默认关闭：本地开发按一下"发布"不该去骚扰 GitHub。
-    # 关闭时连 site_builds 都不写，避免队列堆积后在重启时一次性爆出来。
-    enabled: ${BLOG_SITE_BUILD_ENABLED:false}
-    repository: ${BLOG_SITE_BUILD_REPOSITORY:}
-    token: ${BLOG_SITE_BUILD_TOKEN:}
-    # 必须与 workflow 里 on.repository_dispatch.types 一致
-    event-type: ${BLOG_SITE_BUILD_EVENT_TYPE:site-rebuild}
-    # 一次改 5 篇文章只该触发一次构建
-    debounce: ${BLOG_SITE_BUILD_DEBOUNCE:30s}
-    max-batch: ${BLOG_SITE_BUILD_MAX_BATCH:200}
-  comment:
-    max-length: ${BLOG_COMMENT_MAX_LENGTH:1000}
-    max-name-length: ${BLOG_COMMENT_MAX_NAME_LENGTH:30}
-    max-per-hour: ${BLOG_COMMENT_MAX_PER_HOUR:5}
-    # 真人不可能 3 秒内读完并填完一个表单
-    min-submit-millis: ${BLOG_COMMENT_MIN_SUBMIT_MILLIS:3000}
-  view:
-    dedupe-window: ${BLOG_VIEW_DEDUPE_WINDOW:1h}
-    max-per-hour-per-ip: ${BLOG_VIEW_MAX_PER_HOUR_PER_IP:100}
   admin:
     username: ${BLOG_ADMIN_USERNAME:admin}
-    # 同样刻意不给默认值；为空时启动会记 WARN 并跳过建号（见 AdminUserInitializer）
+    # 刻意不给默认值；为空时启动会记 WARN 并跳过建号
     password: ${BLOG_ADMIN_PASSWORD:}
   session:
     cookie-name: BLOG_SESSION
     ttl: 7d
     secure: ${BLOG_COOKIE_SECURE:true}
-  export:
-    # 必须给空字符串默认值。不给的话，未设环境变量时这个值会变成字面量
-    # "${BLOG_EXPORT_TOKEN}" —— 那是仓库里公开可见的字符串，等于 token 形同虚设。
-    # 空值会让导出接口返回 503（见 ExportController.requireValidToken）。
-    token: ${BLOG_EXPORT_TOKEN:}
+  security:
+    # IP 哈希盐。
+    ip-salt: ${BLOG_IP_SALT:abyssvstar-blog}
+  rate-limit:
+    # 可以关闭限流
+    enabled: ${BLOG_RATE_LIMIT_ENABLED:true}
+    key-prefix: blog:rl
 
 logging:
   level:

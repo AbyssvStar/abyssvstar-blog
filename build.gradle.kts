@@ -28,6 +28,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
+    // AOP：限流切面（@RateLimit）用它。拦的不是 HTTP 请求而是方法调用，所以必须是切面而不是拦截器。
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+
+    // 持久层：MyBatis-Plus。自带 spring-boot-starter-jdbc（上面那行显式保留是为了让 DataSource 来源清楚）
+    implementation("com.baomidou:mybatis-plus-spring-boot3-starter:3.5.7")
+
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 

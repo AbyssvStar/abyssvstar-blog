@@ -15,8 +15,7 @@ data class SessionData(
 )
 
 /**
- * 会话存 Redis 而不是 JWT：**可以即时吊销**。
- * 对单人后台来说，能一键把可疑会话踢掉比"无状态"重要得多。
+ * 会话存 Redis 而不是 JWT
  */
 @Component
 class SessionStore(

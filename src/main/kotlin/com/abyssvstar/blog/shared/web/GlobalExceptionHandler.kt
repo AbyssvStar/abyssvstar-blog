@@ -14,8 +14,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 
 /**
- * 全局异常处理：把一切异常收敛成统一的 envelope，并且**绝不把内部细节泄漏给客户端**。
- * 设计依据 docs/05-api-contract.md §9。
+ * 全局异常处理：把一切异常收敛成统一的 envelope
  */
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -24,7 +23,6 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException::class)
     fun handleBusiness(ex: BusinessException, request: HttpServletRequest): ResponseEntity<ApiResponse<Nothing>> {
-        // 5xx 级别的业务异常才需要完整堆栈，4xx 是正常的业务分支
         if (ex.errorCode.httpStatus >= 500) {
             log.error("业务异常 code={} uri={}", ex.errorCode.code, request.requestURI, ex)
         } else {
@@ -68,7 +66,7 @@ class GlobalExceptionHandler {
     fun handleMethodNotAllowed(ex: HttpRequestMethodNotSupportedException): ResponseEntity<ApiResponse<Nothing>> =
         respond(ErrorCode.METHOD_NOT_ALLOWED, null, null)
 
-    /** 静态资源 / 未匹配路由。Spring 6.1+ 抛这个而不是 NoHandlerFoundException。 */
+    /** 静态资源 / 未匹配路由。 */
     @ExceptionHandler(NoResourceFoundException::class)
     fun handleNoResource(): ResponseEntity<ApiResponse<Nothing>> = respond(ErrorCode.NOT_FOUND, null, null)
 

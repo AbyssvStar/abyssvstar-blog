@@ -14,9 +14,6 @@ object Hashing {
 
 /**
  * 客户端 IP 的取值与哈希。
- *
- * **绝不存原始 IP**：限流只需要"同一个来源"这个等价类，哈希足够，
- * 而且万一数据库泄漏也不构成隐私事故。详见 docs/04-domain-rules.md §9。
  */
 object ClientIp {
 
