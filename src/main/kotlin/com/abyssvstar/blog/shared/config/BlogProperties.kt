@@ -27,6 +27,7 @@ data class BlogProperties(
     val session: Session = Session(),
     val security: Security = Security(),
     val rateLimit: RateLimit = RateLimit(),
+    val storage: Storage = Storage(),
 ) {
     data class Admin(
         val username: String = "admin",
@@ -55,5 +56,31 @@ data class BlogProperties(
         val enabled: Boolean = true,
         /** Redis key 前缀。多个环境共用同一个 Redis 时靠它隔离计数。 */
         val keyPrefix: String = "blog:rl",
+    )
+
+    /**
+     * 对象存储（MinIO 自建图床）。设计与理由见 `docs/01` §4.3、§7。
+     *
+     * 为什么这些能进配置而限流不能：**它们是环境相关的**。
+     * 本地是 `localhost:9000`，线上是内网服务名；凭据更是每个环境都不同。
+     */
+    data class Storage(
+        /** MinIO 服务地址。容器内用 `http://minio:9000`。 */
+        val endpoint: String = "http://localhost:9000",
+        val accessKey: String = "",
+        val secretKey: String = "",
+        val bucket: String = "blog-media",
+        /**
+         * 对外访问前缀。图片 URL = `{publicBaseUrl}/{objectName}`。
+         *
+         * 指向 Nginx（`https://域名/media`）而不是 MinIO 的 9000 端口 ——
+         * HTTPS、缓存、限流都在 Nginx 那层处理，MinIO 只管存。
+         */
+        val publicBaseUrl: String = "http://localhost:9000/blog-media",
+        /**
+         * 对象名前缀。多个环境共用一个 bucket 时用它隔离（例如 `dev/`）。
+         * 为空表示直接用 bucket 根目录。
+         */
+        val keyPrefix: String = "",
     )
 }

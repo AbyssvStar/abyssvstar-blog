@@ -34,6 +34,9 @@ dependencies {
     // 持久层：MyBatis-Plus。自带 spring-boot-starter-jdbc（上面那行显式保留是为了让 DataSource 来源清楚）
     implementation("com.baomidou:mybatis-plus-spring-boot3-starter:3.5.7")
 
+    // 对象存储：MinIO 自建图床。图片不落在应用服务器上
+    implementation("io.minio:minio:8.5.1")
+
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
