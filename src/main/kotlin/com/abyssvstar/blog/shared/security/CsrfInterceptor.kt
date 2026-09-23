@@ -12,9 +12,6 @@ import java.security.MessageDigest
 /**
  * 非幂等请求的 CSRF 校验。必须注册在 [AuthInterceptor] **之后** ——
  * 它直接复用上一步放进 request attribute 的会话，不再多读一次 Redis。
- *
- * 登录端点被排除：它是唯一在会话建立之前调用的写接口，此时没有 token 可比对。
- * 风险由 SameSite=Strict 兜住（跨站请求根本带不上 Cookie）。详见 docs/08 §7。
  */
 @Component
 class CsrfInterceptor : HandlerInterceptor {

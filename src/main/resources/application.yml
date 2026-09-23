@@ -91,6 +91,16 @@ blog:
     # 可以关闭限流
     enabled: ${BLOG_RATE_LIMIT_ENABLED:true}
     key-prefix: blog:rl
+  storage:
+    endpoint: ${BLOG_STORAGE_ENDPOINT:http://localhost:9000}
+    # 为空时应用照常启动，只是图片功能不可用
+    access-key: ${BLOG_STORAGE_ACCESS_KEY:}
+    secret-key: ${BLOG_STORAGE_SECRET_KEY:}
+    bucket: ${BLOG_STORAGE_BUCKET:blog-media}
+    # 图片对外前缀。生产环境应指向 Nginx：https://<域名>/media
+    public-base-url: ${BLOG_STORAGE_PUBLIC_BASE_URL:http://localhost:9000/media}
+    # 多环境共用一个 bucket 时用它隔离，例如 dev/
+    key-prefix: ${BLOG_STORAGE_KEY_PREFIX:}
 
 logging:
   level:
