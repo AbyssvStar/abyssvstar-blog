@@ -147,7 +147,7 @@ CREATE INDEX post_publications_tags_idx ON post_publications USING GIN (tags);
 | 列 | 类型 | 说明 |
 |---|---|---|
 | `id` | bigserial PK | |
-| `path` | text NOT NULL | `/uploads/2026/09/{uuid}.png` |
+| `path` | text NOT NULL | **对象名**，如 `2026/09/{uuid}.png`。完整 URL = `{blog.storage.public-base-url}/{path}`（见 `01` §4.3） |
 | `original_name` | text | |
 | `mime` | text NOT NULL | 白名单：jpeg / png / webp / gif |
 | `size_bytes` | bigint NOT NULL | ≤ 5MB |
