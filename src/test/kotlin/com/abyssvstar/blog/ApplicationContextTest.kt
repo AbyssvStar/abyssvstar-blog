@@ -2,6 +2,7 @@ package com.abyssvstar.blog
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 
 /**
  * 只验证「Spring 上下文能不能装配起来」。不碰 PostgreSQL、不碰 Redis。
@@ -21,6 +22,9 @@ import org.springframework.boot.test.context.SpringBootTest
  * 这个测试已经抓到过一个真实缺陷：`application.yml` 里若干环境变量没给默认值，
  * 导致缺配置时抛 `NumberFormatException: For input string: "${REDIS_PORT}"` 而不是
  * 一句能看懂的"缺少配置"。现在这些坐标都有默认值了。
+ *
+ * **profile 固定为 `test`**：`ObjectStorageInitializer` 之类"启动期基础设施自检"
+ * 在 `test` profile 下不生效 —— 本测试只验证装配，不起 MinIO。
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -34,6 +38,7 @@ import org.springframework.boot.test.context.SpringBootTest
         "blog.admin.auto-initialize=false",
     ],
 )
+@ActiveProfiles("test")
 class ApplicationContextTest {
 
     @Test
