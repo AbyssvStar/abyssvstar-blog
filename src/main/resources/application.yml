@@ -93,7 +93,7 @@ blog:
     key-prefix: blog:rl
   storage:
     endpoint: ${BLOG_STORAGE_ENDPOINT:http://localhost:9000}
-    # 为空时应用照常启动，只是图片功能不可用
+    # 启动期强校验：未配置就让应用启动失败，不做降级
     access-key: ${BLOG_STORAGE_ACCESS_KEY:}
     secret-key: ${BLOG_STORAGE_SECRET_KEY:}
     bucket: ${BLOG_STORAGE_BUCKET:blog-media}

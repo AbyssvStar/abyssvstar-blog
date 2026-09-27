@@ -13,9 +13,8 @@ RUN ./gradlew --no-daemon --console=plain bootJar
 # ---- 运行阶段 ----
 FROM eclipse-temurin:21-jre-alpine
 
-RUN addgroup -S app && adduser -S app -G app \
- && mkdir -p /data/uploads \
- && chown -R app:app /data
+# 应用不往本地磁盘写任何东西：图片进 MinIO，数据进 PG / Redis，日志走 stdout
+RUN addgroup -S app && adduser -S app -G app
 
 WORKDIR /app
 COPY --from=build /src/build/libs/app.jar /app/app.jar

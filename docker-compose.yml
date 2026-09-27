@@ -1,7 +1,7 @@
 name: abyssvstar-blog
 
-# 默认 profile：postgres + redis + app
-# 加 ES：  docker compose --profile es up -d
+# 默认启动：postgres + redis + minio + app
+# 加 ES：docker compose --profile es up -d
 # 生产服务器上 ES 默认不开，只在需要时临时起。
 
 services:
