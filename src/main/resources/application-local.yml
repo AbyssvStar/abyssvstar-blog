@@ -1,5 +1,9 @@
-# 本地开发 profile：假设 docker compose up -d postgres redis 已经起好
-# 运行：  ./gradlew bootRun --args='--spring.profiles.active=local'
+# 本地开发 profile：应用跑在宿主机，基础设施跑在容器里。
+#
+# PG / Redis / MinIO 都是核心依赖，缺任何一个应用都会拒绝启动，所以三个都要起：
+#   docker compose up -d postgres redis minio
+# 再运行：
+#   ./gradlew bootRun --args='--spring.profiles.active=local'
 
 spring:
   datasource:
@@ -18,8 +22,13 @@ blog:
     username: admin
     password: local-dev-password
   session:
-    # 本地是 http，Secure Cookie 会直接失效 —— 必须关掉
+    # 本地是 http，Secure Cookie 会直接失效，必须关掉
     secure: false
+  storage:
+    # 凭据要和 .env 里的 MINIO_ROOT_USER / MINIO_ROOT_PASSWORD 一致
+    endpoint: http://localhost:9000
+    access-key: blog-minio
+    secret-key: change-me-minio
 
 logging:
   level:

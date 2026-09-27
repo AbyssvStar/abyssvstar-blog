@@ -28,10 +28,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
-    // AOP：限流切面（@RateLimit）用它。拦的不是 HTTP 请求而是方法调用，所以必须是切面而不是拦截器。
+    // AOP：限流切面（@RateLimit）要拦方法调用而不是 HTTP 请求，所以用切面而非拦截器。
     implementation("org.springframework.boot:spring-boot-starter-aop")
 
-    // 持久层：MyBatis-Plus。自带 spring-boot-starter-jdbc（上面那行显式保留是为了让 DataSource 来源清楚）
+    // 持久层：MyBatis-Plus，会传递引入 spring-boot-starter-jdbc；上面那行显式保留只为标明 DataSource 来源。
     implementation("com.baomidou:mybatis-plus-spring-boot3-starter:3.5.7")
 
     // 对象存储：MinIO 自建图床。图片不落在应用服务器上
@@ -50,8 +50,8 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
-    // 上下文装配测试只需要一个能用的 DataSource；迁移在测试里关掉，
-    // 因为 V1–V8 是 PostgreSQL 专用的（jsonb / timestamptz / GIN / pg_trgm）。
+    // 上下文装配测试只需要一个能用的 DataSource。迁移在测试里关掉，
+    // 因为迁移脚本是 PostgreSQL 专用的（jsonb / timestamptz / GIN / pg_trgm）。
     testRuntimeOnly("com.h2database:h2")
 }
 

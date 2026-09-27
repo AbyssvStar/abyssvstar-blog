@@ -41,10 +41,11 @@ build/
 .vscode/
 *.swp
 
-# --- Node / Astro (前端) ---
+# --- Node / Next.js（前端）---
 node_modules/
 dist/
-.astro/
+.next/
+out/
 .pnpm-store/
 
 # --- 环境变量与密钥（绝不提交）---
