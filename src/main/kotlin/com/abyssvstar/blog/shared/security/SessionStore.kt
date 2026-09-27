@@ -15,7 +15,10 @@ data class SessionData(
 )
 
 /**
- * 会话存 Redis 而不是 JWT
+ * 会话读写。
+ *
+ * 存 Redis 而不是 JWT：作者只有一个账号，服务端状态反而更简单，
+ * 而且登出、踢下线都能立刻生效。
  */
 @Component
 class SessionStore(

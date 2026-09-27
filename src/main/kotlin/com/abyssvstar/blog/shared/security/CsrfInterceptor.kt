@@ -10,8 +10,10 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 /**
- * 非幂等请求的 CSRF 校验。必须注册在 [AuthInterceptor] **之后** ——
- * 它直接复用上一步放进 request attribute 的会话，不再多读一次 Redis。
+ * 非幂等请求的 CSRF 校验。
+ *
+ * 必须注册在 [AuthInterceptor] 之后：它直接复用上一步放进 request attribute 的会话，
+ * 不再多读一次 Redis。
  */
 @Component
 class CsrfInterceptor : HandlerInterceptor {

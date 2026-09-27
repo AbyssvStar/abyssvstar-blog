@@ -16,10 +16,8 @@ import org.springframework.stereotype.Component
 /**
  * 对象存储（MinIO 自建图床）的访问入口。
  *
- * ## 关键设计：客户端 lazy，但**启动期必须自检**
- *
- * 构造 `MinioClient` 不建立连接。lazy 是为了让不碰存储的场景（比如上下文装配测试）
- * 能装配起来；而**真正启动应用时，`ObjectStorageInitializer` 会调 [verifyOrFail]**
+ * `MinioClient` 是 lazy 的，因为构造它并不建立连接；真正的可用性由启动期的
+ * [verifyOrFail] 保证，失败直接终止启动。
  */
 @Component
 class ObjectStorage(private val props: BlogProperties) {
@@ -33,15 +31,11 @@ class ObjectStorage(private val props: BlogProperties) {
             .build()
     }
 
-    /** 凭据是否配了。启动期由 [verifyOrFail] 强制要求；只有测试会绕过。 */
+    /** 凭据是否配了。启动期由 [verifyOrFail] 强制要求，只有测试会绕过。 */
     val isConfigured: Boolean
         get() = props.storage.accessKey.isNotBlank() && props.storage.secretKey.isNotBlank()
 
-    /**
-     * 上传。
-     *
-     * @return 可直接写进 Markdown 的公开 URL
-     */
+    /** 上传并返回可直接写进 Markdown 的公开 URL。 */
     fun put(objectName: String, bytes: ByteArray, contentType: String): String {
         requireConfigured()
         val key = withPrefix(objectName)
@@ -55,8 +49,8 @@ class ObjectStorage(private val props: BlogProperties) {
                     .build(),
             )
         } catch (ex: Exception) {
-            // 启动时已经自检过了，所以运行期在这里失败通常意味着 MinIO 中途掉了。
-            // 这种情况给调用方一个 503 就够了，不必让整个应用崩掉。
+            // 启动时已经自检过，运行期在这里失败通常意味着 MinIO 中途掉了。
+            // 给调用方一个 503 就够了，不必让整个应用崩掉。
             log.error("对象存储写入失败 bucket={} key={}", props.storage.bucket, key, ex)
             throw BusinessException(ErrorCode.SERVICE_UNAVAILABLE, "图片存储暂时不可用")
         }
@@ -77,7 +71,7 @@ class ObjectStorage(private val props: BlogProperties) {
         }
     }
 
-    /** 存在性检查。**不抛异常** —— 清理任务用它判断文件是否还在。 */
+    /** 存在性检查，不抛异常：清理任务靠它判断文件是否还在。 */
     fun exists(objectName: String): Boolean {
         if (!isConfigured) return false
         return runCatching {
@@ -88,13 +82,11 @@ class ObjectStorage(private val props: BlogProperties) {
         }.getOrDefault(false)
     }
 
-    /** 公开访问 URL。图片必须能**不经鉴权、永久**访问，所以 bucket 是公开只读的。 */
+    /** 公开访问 URL。图片要能不经鉴权永久访问，所以 bucket 是公开只读的。 */
     fun publicUrl(objectName: String): String =
         "${props.storage.publicBaseUrl.trimEnd('/')}/${withPrefix(objectName)}"
 
-    /**
-     * 确保 bucket 存在；只在新建时顺带设置公开只读策略。
-     */
+    /** 确保 bucket 存在；只在新建时顺带设置公开只读策略。 */
     fun ensureBucket() {
         requireConfigured()
         val bucket = props.storage.bucket
@@ -111,10 +103,10 @@ class ObjectStorage(private val props: BlogProperties) {
     }
 
     /**
-     * 启动期自检：**不降级，失败就终止启动。**
+     * 启动期自检，不降级，失败就终止启动。
      *
-     * 抛 `IllegalStateException` 而不是 `BusinessException`：这不是一次请求的业务失败，
-     * 而是"这个进程不该启动"，要让 Spring Boot 直接终止启动流程。
+     * 抛 `IllegalStateException` 而非 `BusinessException`：这不是一次请求的业务失败，
+     * 而是进程不该启动，要让 Spring Boot 终止启动流程。
      */
     fun verifyOrFail() {
         if (!isConfigured) {
@@ -147,7 +139,7 @@ class ObjectStorage(private val props: BlogProperties) {
         }
     }
 
-    /** 只允许匿名 `GetObject` —— 能读图，不能列目录、不能写、不能删。 */
+    /** 只允许匿名 `GetObject`：能读图，不能列目录，不能写，不能删。 */
     private fun publicReadPolicy(bucket: String): String = """
         {
           "Version": "2012-10-17",
