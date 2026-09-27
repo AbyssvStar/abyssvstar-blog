@@ -13,9 +13,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 
-/**
- * 全局异常处理：把一切异常收敛成统一的 envelope
- */
+/** 全局异常处理：把各类异常收敛成统一的 envelope。 */
 @RestControllerAdvice
 class GlobalExceptionHandler {
 
@@ -73,8 +71,8 @@ class GlobalExceptionHandler {
     /**
      * 请求体超过 multipart 上限。
      *
-     * 不拦的话它会落到兜底的 Exception 分支变成 500，而客户端拿到的应该是一个明确的
-     * "文件太大"（40002），这样才能给出正确的提示。
+     * 不拦的话会落到兜底的 Exception 分支变成 500，而客户端应该拿到一个明确的
+     * 「文件太大」，才能给出正确提示。
      */
     @ExceptionHandler(MaxUploadSizeExceededException::class)
     fun handleUploadTooLarge(ex: MaxUploadSizeExceededException): ResponseEntity<ApiResponse<Nothing>> {
@@ -84,7 +82,7 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(ex: Exception, request: HttpServletRequest): ResponseEntity<ApiResponse<Nothing>> {
-        // 堆栈进日志，响应里只给一句通用文案 + traceId（在响应头里，见 TraceIdFilter）
+        // 堆栈进日志，响应里只给一句通用文案，具体原因靠响应头里的 traceId 去日志里查
         log.error("未捕获异常 uri={}", request.requestURI, ex)
         return respond(ErrorCode.INTERNAL_ERROR, null, null)
     }

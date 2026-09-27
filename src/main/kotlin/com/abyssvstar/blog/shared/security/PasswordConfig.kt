@@ -5,9 +5,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 
-/**
- * 密码哈希。
- */
+/** 密码哈希策略。全站只有后台管理员一个账号在用。 */
 @Configuration
 class PasswordConfig {
 

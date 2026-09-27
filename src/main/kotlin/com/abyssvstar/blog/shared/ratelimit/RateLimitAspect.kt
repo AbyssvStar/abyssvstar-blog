@@ -14,9 +14,10 @@ import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 
 /**
- * 限流切面。
- * 抛出的 [BusinessException] 会被 `GlobalExceptionHandler` 统一转成 429 envelope ——
- * 因为切面是在 DispatcherServlet 调 handler 的过程中生效的，异常会正常向上传播到异常解析器。
+ * `@RateLimit` 的切面实现。
+ *
+ * 抛出的 [BusinessException] 会经 `GlobalExceptionHandler` 变成 429 envelope：
+ * 切面在 DispatcherServlet 调 handler 的过程中生效，异常能正常传播到异常解析器。
  */
 @Aspect
 @Component
@@ -57,9 +58,7 @@ class RateLimitAspect(
         }
     }
 
-    /**
-     * 计数桶 = `类名.方法名:维度`。
-     */
+    /** 计数桶为 `类名.方法名:维度`。 */
     private fun bucketOf(joinPoint: ProceedingJoinPoint, rateLimit: RateLimit): String {
         val signature = joinPoint.signature as MethodSignature
         val target = "${signature.declaringType.simpleName}.${signature.name}"
