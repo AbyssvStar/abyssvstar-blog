@@ -1,0 +1,163 @@
+name: abyssvstar-blog
+
+# 默认 profile：postgres + redis + app
+# 加 ES：  docker compose --profile es up -d
+# 生产服务器上 ES 默认不开，只在需要时临时起。
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-blog}
+      POSTGRES_USER: ${POSTGRES_USER:-blog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 必须设置}
+      TZ: Asia/Shanghai
+      PGTZ: Asia/Shanghai
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - max_connections=60
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-blog} -d ${POSTGRES_DB:-blog}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: blog-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --appendonly
+      - "no"
+      - --save
+      - ""
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    logging: *default-logging
+
+  minio:
+    image: minio/minio:latest
+    container_name: blog-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER 必须设置}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD 必须设置}
+      # MinIO 自己不需要浏览器，关掉控制台的更新检查，省一次跨境请求
+      MINIO_UPDATE: "off"
+      TZ: Asia/Shanghai
+    volumes:
+      - miniodata:/data
+    ports:
+      # 只绑本机：图片由 Nginx 反代出去（/media/**），不直接把 9000 暴露到公网
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    logging: *default-logging
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${APP_IMAGE:-abyssvstar-blog-app:local}
+    container_name: blog-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      # 只保证启动顺序：MinIO 通常比 JVM 起得快。
+      # 万一 MinIO 还没就绪，应用会因为对象存储自检失败而退出，
+      # `restart: unless-stopped` 会让它自动重试 —— 这比"静默降级"好。
+      minio:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-blog}
+      POSTGRES_USER: ${POSTGRES_USER:-blog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 必须设置}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # 对象存储。应用侧只认这几个变量，MinIO 的 root 凭据就是它的访问凭据
+      BLOG_STORAGE_ENDPOINT: http://minio:9000
+      BLOG_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER 必须设置}
+      BLOG_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD 必须设置}
+      BLOG_STORAGE_BUCKET: ${MINIO_BUCKET:-blog-media}
+      BLOG_STORAGE_PUBLIC_BASE_URL: ${BLOG_STORAGE_PUBLIC_BASE_URL:-http://localhost:8080/media}
+      BLOG_ADMIN_USERNAME: ${BLOG_ADMIN_USERNAME:-admin}
+      BLOG_ADMIN_PASSWORD: ${BLOG_ADMIN_PASSWORD:?BLOG_ADMIN_PASSWORD 必须设置}
+      BLOG_BASE_URL: ${BLOG_BASE_URL:-http://localhost:3000}
+      BLOG_COOKIE_SECURE: "true"
+      JAVA_TOOL_OPTIONS: "-Xmx512m -XX:MaxMetaspaceSize=160m -XX:+UseSerialGC -Djava.awt.headless=true -Duser.timezone=Asia/Shanghai"
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    logging: *default-logging
+
+  # ---- 可选：只在 --profile es 时启动 ----
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: blog-es
+    profiles: ["es"]
+    restart: unless-stopped
+    environment:
+      # 这一行是 2H4G 的命门：堆必须卡死，不许自适应
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.ml.enabled: "false"
+      bootstrap.memory_lock: "false"
+      TZ: Asia/Shanghai
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "127.0.0.1:9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 12
+      start_period: 90s
+    logging: *default-logging
+
+volumes:
+  pgdata:
+  miniodata:
+  esdata:
