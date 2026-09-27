@@ -116,7 +116,6 @@ services:
       BLOG_STORAGE_PUBLIC_BASE_URL: ${BLOG_STORAGE_PUBLIC_BASE_URL:-http://localhost:8080/media}
       BLOG_ADMIN_USERNAME: ${BLOG_ADMIN_USERNAME:-admin}
       BLOG_ADMIN_PASSWORD: ${BLOG_ADMIN_PASSWORD:?BLOG_ADMIN_PASSWORD 必须设置}
-      BLOG_BASE_URL: ${BLOG_BASE_URL:-http://localhost:3000}
       BLOG_COOKIE_SECURE: "true"
       JAVA_TOOL_OPTIONS: "-Xmx512m -XX:MaxMetaspaceSize=160m -XX:+UseSerialGC -Djava.awt.headless=true -Duser.timezone=Asia/Shanghai"
     ports:

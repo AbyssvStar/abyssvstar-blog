@@ -3,12 +3,12 @@ package com.abyssvstar.blog.admin.web
 import com.abyssvstar.blog.admin.service.AdminAuthService
 import com.abyssvstar.blog.admin.web.dto.LoginRequest
 import com.abyssvstar.blog.admin.web.dto.MeResponse
-import com.abyssvstar.blog.shared.config.BlogProperties
 import com.abyssvstar.blog.shared.ratelimit.CountOn
 import com.abyssvstar.blog.shared.ratelimit.RateLimit
 import com.abyssvstar.blog.shared.security.AuthContext
 import com.abyssvstar.blog.shared.security.CookieSupport
 import com.abyssvstar.blog.shared.security.SessionData
+import com.abyssvstar.blog.shared.security.SessionProperties
 import com.abyssvstar.blog.shared.web.ApiResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/admin/api/auth")
 class AdminAuthController(
     private val authService: AdminAuthService,
-    private val props: BlogProperties,
+    private val props: SessionProperties,
 ) {
 
     /**
@@ -46,10 +46,10 @@ class AdminAuthController(
     ): ApiResponse<MeResponse> {
         val result = authService.login(body.username, body.password)
         val cookie = CookieSupport.issue(
-            name = props.session.cookieName,
+            name = props.cookieName,
             value = result.sessionId,
-            ttl = props.session.ttl,
-            secure = props.session.secure,
+            ttl = props.ttl,
+            secure = props.secure,
         )
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString())
         return ApiResponse.ok(result.session.toMeResponse())
@@ -58,7 +58,7 @@ class AdminAuthController(
     @PostMapping("/logout")
     fun logout(request: HttpServletRequest, response: HttpServletResponse): ApiResponse<Unit> {
         authService.logout(AuthContext.sessionId(request))
-        val cleared = CookieSupport.clear(props.session.cookieName, props.session.secure)
+        val cleared = CookieSupport.clear(props.cookieName, props.secure)
         response.addHeader(HttpHeaders.SET_COOKIE, cleared.toString())
         return ApiResponse.ok()
     }

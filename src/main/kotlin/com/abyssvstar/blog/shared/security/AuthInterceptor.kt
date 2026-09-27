@@ -1,6 +1,5 @@
 package com.abyssvstar.blog.shared.security
 
-import com.abyssvstar.blog.shared.config.BlogProperties
 import com.abyssvstar.blog.shared.web.BusinessException
 import com.abyssvstar.blog.shared.web.ErrorCode
 import jakarta.servlet.http.HttpServletRequest
@@ -17,11 +16,11 @@ import org.springframework.web.servlet.HandlerInterceptor
 @Component
 class AuthInterceptor(
     private val sessions: SessionStore,
-    private val props: BlogProperties,
+    private val props: SessionProperties,
 ) : HandlerInterceptor {
 
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
-        val sessionId = CookieSupport.read(request, props.session.cookieName)
+        val sessionId = CookieSupport.read(request, props.cookieName)
         val data = sessions.find(sessionId) ?: throw BusinessException(ErrorCode.UNAUTHENTICATED)
 
         sessions.renew(sessionId!!)

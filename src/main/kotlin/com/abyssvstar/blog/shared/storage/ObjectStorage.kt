@@ -1,6 +1,5 @@
 package com.abyssvstar.blog.shared.storage
 
-import com.abyssvstar.blog.shared.config.BlogProperties
 import com.abyssvstar.blog.shared.web.BusinessException
 import com.abyssvstar.blog.shared.web.ErrorCode
 import io.minio.BucketExistsArgs
@@ -20,20 +19,20 @@ import org.springframework.stereotype.Component
  * [verifyOrFail] 保证，失败直接终止启动。
  */
 @Component
-class ObjectStorage(private val props: BlogProperties) {
+class ObjectStorage(private val props: StorageProperties) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val client: MinioClient by lazy {
         MinioClient.builder()
-            .endpoint(props.storage.endpoint)
-            .credentials(props.storage.accessKey, props.storage.secretKey)
+            .endpoint(props.endpoint)
+            .credentials(props.accessKey, props.secretKey)
             .build()
     }
 
     /** 凭据是否配了。启动期由 [verifyOrFail] 强制要求，只有测试会绕过。 */
     val isConfigured: Boolean
-        get() = props.storage.accessKey.isNotBlank() && props.storage.secretKey.isNotBlank()
+        get() = props.accessKey.isNotBlank() && props.secretKey.isNotBlank()
 
     /** 上传并返回可直接写进 Markdown 的公开 URL。 */
     fun put(objectName: String, bytes: ByteArray, contentType: String): String {
@@ -42,7 +41,7 @@ class ObjectStorage(private val props: BlogProperties) {
         try {
             client.putObject(
                 PutObjectArgs.builder()
-                    .bucket(props.storage.bucket)
+                    .bucket(props.bucket)
                     .`object`(key)
                     .stream(bytes.inputStream(), bytes.size.toLong(), -1L)
                     .contentType(contentType)
@@ -51,10 +50,10 @@ class ObjectStorage(private val props: BlogProperties) {
         } catch (ex: Exception) {
             // 启动时已经自检过，运行期在这里失败通常意味着 MinIO 中途掉了。
             // 给调用方一个 503 就够了，不必让整个应用崩掉。
-            log.error("对象存储写入失败 bucket={} key={}", props.storage.bucket, key, ex)
+            log.error("对象存储写入失败 bucket={} key={}", props.bucket, key, ex)
             throw BusinessException(ErrorCode.SERVICE_UNAVAILABLE, "图片存储暂时不可用")
         }
-        log.debug("对象已上传 bucket={} key={} bytes={}", props.storage.bucket, key, bytes.size)
+        log.debug("对象已上传 bucket={} key={} bytes={}", props.bucket, key, bytes.size)
         return publicUrl(objectName)
     }
 
@@ -63,10 +62,10 @@ class ObjectStorage(private val props: BlogProperties) {
         val key = withPrefix(objectName)
         try {
             client.removeObject(
-                RemoveObjectArgs.builder().bucket(props.storage.bucket).`object`(key).build(),
+                RemoveObjectArgs.builder().bucket(props.bucket).`object`(key).build(),
             )
         } catch (ex: Exception) {
-            log.error("对象存储删除失败 bucket={} key={}", props.storage.bucket, key, ex)
+            log.error("对象存储删除失败 bucket={} key={}", props.bucket, key, ex)
             throw BusinessException(ErrorCode.SERVICE_UNAVAILABLE, "图片存储暂时不可用")
         }
     }
@@ -76,7 +75,7 @@ class ObjectStorage(private val props: BlogProperties) {
         if (!isConfigured) return false
         return runCatching {
             client.statObject(
-                StatObjectArgs.builder().bucket(props.storage.bucket).`object`(withPrefix(objectName)).build(),
+                StatObjectArgs.builder().bucket(props.bucket).`object`(withPrefix(objectName)).build(),
             )
             true
         }.getOrDefault(false)
@@ -84,12 +83,12 @@ class ObjectStorage(private val props: BlogProperties) {
 
     /** 公开访问 URL。图片要能不经鉴权永久访问，所以 bucket 是公开只读的。 */
     fun publicUrl(objectName: String): String =
-        "${props.storage.publicBaseUrl.trimEnd('/')}/${withPrefix(objectName)}"
+        "${props.publicBaseUrl.trimEnd('/')}/${withPrefix(objectName)}"
 
     /** 确保 bucket 存在；只在新建时顺带设置公开只读策略。 */
     fun ensureBucket() {
         requireConfigured()
-        val bucket = props.storage.bucket
+        val bucket = props.bucket
         val exists = client.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())
         if (exists) {
             log.debug("bucket 已存在，不修改其策略：{}", bucket)
@@ -119,14 +118,14 @@ class ObjectStorage(private val props: BlogProperties) {
             ensureBucket()
         } catch (ex: Exception) {
             throw IllegalStateException(
-                "对象存储不可用（${props.storage.endpoint}，bucket=${props.storage.bucket}）：${ex.message}",
+                "对象存储不可用（${props.endpoint}，bucket=${props.bucket}）：${ex.message}",
                 ex,
             )
         }
     }
 
     private fun withPrefix(objectName: String): String {
-        val prefix = props.storage.keyPrefix.trim().trim('/')
+        val prefix = props.keyPrefix.trim().trim('/')
         return if (prefix.isEmpty()) objectName else "$prefix/$objectName"
     }
 

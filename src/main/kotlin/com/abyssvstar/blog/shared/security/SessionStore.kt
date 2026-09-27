@@ -1,6 +1,5 @@
 package com.abyssvstar.blog.shared.security
 
-import com.abyssvstar.blog.shared.config.BlogProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
@@ -24,7 +23,7 @@ data class SessionData(
 class SessionStore(
     private val redis: StringRedisTemplate,
     private val objectMapper: ObjectMapper,
-    private val props: BlogProperties,
+    private val props: SessionProperties,
 ) {
 
     private val random = SecureRandom()
@@ -32,7 +31,7 @@ class SessionStore(
     fun create(userId: Long, username: String): String {
         val sessionId = randomToken(ID_BYTES)
         val data = SessionData(userId = userId, username = username, csrfToken = randomToken(TOKEN_BYTES))
-        redis.opsForValue().set(key(sessionId), objectMapper.writeValueAsString(data), props.session.ttl)
+        redis.opsForValue().set(key(sessionId), objectMapper.writeValueAsString(data), props.ttl)
         return sessionId
     }
 
@@ -44,7 +43,7 @@ class SessionStore(
 
     /** 每次访问续期，TTL 归零即视为登出。 */
     fun renew(sessionId: String) {
-        redis.expire(key(sessionId), props.session.ttl)
+        redis.expire(key(sessionId), props.ttl)
     }
 
     fun destroy(sessionId: String) {
