@@ -75,7 +75,6 @@ management:
       enabled: true
 
 blog:
-  base-url: ${BLOG_BASE_URL:http://localhost:3000}
   admin:
     username: ${BLOG_ADMIN_USERNAME:admin}
     # 刻意不给默认值；为空时启动会记 WARN 并跳过建号
@@ -84,13 +83,12 @@ blog:
     cookie-name: BLOG_SESSION
     ttl: 7d
     secure: ${BLOG_COOKIE_SECURE:true}
-  security:
-    # IP 哈希盐。
-    ip-salt: ${BLOG_IP_SALT:abyssvstar-blog}
   rate-limit:
     # 可以关闭限流
     enabled: ${BLOG_RATE_LIMIT_ENABLED:true}
     key-prefix: blog:rl
+    # IP 哈希盐。换掉后已有的限流计数会失效
+    ip-salt: ${BLOG_IP_SALT:abyssvstar-blog}
   storage:
     endpoint: ${BLOG_STORAGE_ENDPOINT:http://localhost:9000}
     # 启动期强校验：未配置就让应用启动失败，不做降级

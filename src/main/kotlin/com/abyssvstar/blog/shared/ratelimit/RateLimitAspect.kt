@@ -1,6 +1,5 @@
 package com.abyssvstar.blog.shared.ratelimit
 
-import com.abyssvstar.blog.shared.config.BlogProperties
 import com.abyssvstar.blog.shared.util.ClientIp
 import com.abyssvstar.blog.shared.web.BusinessException
 import com.abyssvstar.blog.shared.web.ErrorCode
@@ -23,14 +22,14 @@ import org.springframework.web.context.request.ServletRequestAttributes
 @Component
 class RateLimitAspect(
     private val limiter: RateLimiter,
-    private val props: BlogProperties,
+    private val props: RateLimitProperties,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Around("@annotation(rateLimit)")
     fun enforce(joinPoint: ProceedingJoinPoint, rateLimit: RateLimit): Any? {
-        if (!props.rateLimit.enabled) return joinPoint.proceed()
+        if (!props.enabled) return joinPoint.proceed()
 
         val window = RateLimitWindow.parse(rateLimit.window)
         val bucket = bucketOf(joinPoint, rateLimit)
@@ -72,7 +71,7 @@ class RateLimitAspect(
     private fun clientIpHash(): String {
         val request = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request
             ?: return NO_REQUEST
-        return ClientIp.hash(request, props.security.ipSalt)
+        return ClientIp.hash(request, props.ipSalt)
     }
 
     private companion object {

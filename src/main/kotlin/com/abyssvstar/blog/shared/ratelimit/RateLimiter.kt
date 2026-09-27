@@ -1,6 +1,5 @@
 package com.abyssvstar.blog.shared.ratelimit
 
-import com.abyssvstar.blog.shared.config.BlogProperties
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
 import java.time.Duration
@@ -14,12 +13,12 @@ import java.time.Duration
 @Component
 class RateLimiter(
     private val redis: StringRedisTemplate,
-    private val props: BlogProperties,
+    private val props: RateLimitProperties,
 ) {
 
     /** @return false 表示已超限。 */
     fun tryAcquire(bucket: String, limit: Int, window: Duration): Boolean {
-        if (!props.rateLimit.enabled) return true
+        if (!props.enabled) return true
         val key = key(bucket)
         val count = redis.opsForValue().increment(key) ?: return true
         if (count == 1L) redis.expire(key, window)
@@ -28,13 +27,13 @@ class RateLimiter(
 
     /** 当前窗口已计多少，用于 [CountOn.FAILURE] 在调用前判断阈值。 */
     fun currentCount(bucket: String): Long {
-        if (!props.rateLimit.enabled) return 0L
+        if (!props.enabled) return 0L
         return redis.opsForValue().get(key(bucket))?.toLongOrNull() ?: 0L
     }
 
     /** 记一次失败，用于 [CountOn.FAILURE]。 */
     fun recordFailure(bucket: String, window: Duration) {
-        if (!props.rateLimit.enabled) return
+        if (!props.enabled) return
         val key = key(bucket)
         val count = redis.opsForValue().increment(key) ?: return
         if (count == 1L) redis.expire(key, window)
@@ -42,9 +41,9 @@ class RateLimiter(
 
     /** 清空计数。登录成功后调用，让「连续失败」重新从 0 开始。 */
     fun clear(bucket: String) {
-        if (!props.rateLimit.enabled) return
+        if (!props.enabled) return
         redis.delete(key(bucket))
     }
 
-    private fun key(bucket: String) = "${props.rateLimit.keyPrefix}:$bucket"
+    private fun key(bucket: String) = "${props.keyPrefix}:$bucket"
 }

@@ -2,7 +2,6 @@ package com.abyssvstar.blog.admin
 
 import com.abyssvstar.blog.admin.domain.AdminUser
 import com.abyssvstar.blog.admin.repository.AdminUserMapper
-import com.abyssvstar.blog.shared.config.BlogProperties
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
@@ -22,13 +21,13 @@ import org.springframework.stereotype.Component
 class AdminUserInitializer(
     private val adminUsers: AdminUserMapper,
     private val passwordEncoder: PasswordEncoder,
-    private val props: BlogProperties,
+    private val props: AdminProperties,
 ) : ApplicationRunner {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     override fun run(args: ApplicationArguments) {
-        if (!props.admin.autoInitialize) {
+        if (!props.autoInitialize) {
             log.debug("管理员自动建号已关闭（blog.admin.auto-initialize=false）")
             return
         }
@@ -38,7 +37,7 @@ class AdminUserInitializer(
             return
         }
 
-        if (props.admin.password.isBlank()) {
+        if (props.password.isBlank()) {
             log.warn(
                 "数据库中没有管理员账号，且 blog.admin.password 未配置 —— 后台将无法登录。" +
                     "请设置 BLOG_ADMIN_PASSWORD 环境变量后重启。",
@@ -47,10 +46,10 @@ class AdminUserInitializer(
         }
 
         val admin = AdminUser(
-            username = props.admin.username,
-            passwordHash = passwordEncoder.encode(props.admin.password),
+            username = props.username,
+            passwordHash = passwordEncoder.encode(props.password),
         )
         adminUsers.insert(admin)
-        log.info("已创建管理员账号 id={} username={}", admin.id, props.admin.username)
+        log.info("已创建管理员账号 id={} username={}", admin.id, props.username)
     }
 }
