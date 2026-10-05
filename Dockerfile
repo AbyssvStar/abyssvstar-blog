@@ -5,7 +5,13 @@ WORKDIR /src
 # 先只 copy 构建脚本，让依赖层可被缓存
 COPY gradlew gradlew.bat settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY gradle ./gradle
-RUN chmod +x gradlew && ./gradlew --no-daemon --console=plain dependencies --quiet || true
+
+# git 在 Windows 上检出时会把 gradlew 写成 CRLF，首行的 shebang 就成了 "#!/bin/sh\r"，
+# 容器里的 dash 找不到这个解释器，只报一句 "./gradlew: not found"。先把 CR 去掉，
+# 这样不管在哪种宿主机上检出，镜像都构建得出来。
+RUN sed -i 's/\r$//' gradlew \
+ && chmod +x gradlew \
+ && ./gradlew --no-daemon --console=plain dependencies --quiet
 
 COPY src ./src
 RUN ./gradlew --no-daemon --console=plain bootJar
