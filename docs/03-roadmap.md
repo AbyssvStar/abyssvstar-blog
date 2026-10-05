@@ -21,10 +21,15 @@
 | #   | 任务                                            | 完成标志                              |
 | --- | --------------------------------------------- | --------------------------------- |
 | 1   | Gradle 项目结构 + 包结构                             | `./gradlew build` 通过              |
-| 2   | Docker Compose（pg / redis / app；es 走 profile） | `docker compose up -d` 全部 healthy |
-| 3   | Flyway V1–V8 迁移                               | 全部应用成功                            |
+| 2   | Docker Compose（pg / redis / minio / app；es 走 profile） | `docker compose up -d` 起来；pg / redis / app 为 healthy |
+| 3   | Flyway 迁移（当前只有 V1 baseline）                    | 应用成功                              |
 | 4   | 管理员登录（BCrypt + Redis 会话 + CSRF）               | 能登录、能登出                           |
 | 5   | 全局异常处理 + 统一响应格式                               | 错误返回格式一致                          |
+
+> **为什么 minio 不写 healthcheck。**
+> MinIO 的镜像里没有可靠的探活命令，而应用的启动期自检（`InfrastructureInitializer`）
+> 已经会在 MinIO 不可达时直接终止启动。所以 **app 为 healthy 就蕴含了 MinIO 当时可达**，
+> 不需要再给 minio 单独判一次。
 
 ---
 
