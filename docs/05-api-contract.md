@@ -181,22 +181,24 @@ Header: X-Export-Token: <token>
 > 契约先定、实现按阶段门推进，所以两者会有一段时间的差距 —— 但**差距必须看得见**。
 > 状态标记：`✅` 已实现 ｜ `🚧` 未实现（在计划内）｜ `❌` 刻意不做。
 > 实现进度按 `03-roadmap.md` 的阶段门推进。
+>
+> **截至 G1 通过时，只有「认证」一组是 `✅`，其余全部是 `🚧`。**
 
 ### 7.1 公开 API（`/api/v1`）
 
 | 方法 | 路径 | 状态 | 说明 |
 |------|------|:--:|------|
-| GET | `/posts` | ✅ | 文章列表（分页，可按 `tag` `year` `month` 过滤） |
-| GET | `/posts/{slug}` | ✅ | 文章详情（含上下篇、相关文章） |
-| GET | `/notes` | ✅ | 短动态流（分页） |
-| GET | `/notes/{id}` | ✅ | 单条动态 |
+| GET | `/posts` | 🚧 | 文章列表（分页，可按 `tag` `year` `month` 过滤） |
+| GET | `/posts/{slug}` | 🚧 | 文章详情（含上下篇、相关文章） |
+| GET | `/notes` | 🚧 | 短动态流（分页） |
+| GET | `/notes/{id}` | 🚧 | 单条动态 |
 | GET | `/tags` | ❌ | **刻意不做**：静态站构建时用 `/export` 拿标签，多一个公开入口只会多一处要维护、要限流、要保持一致性的地方 |
 | GET | `/archive` | 🚧 | 按年月归档统计（G3 的归档页依赖它，之前是漏记的缺口） |
 | GET | `/search?q=` | 🚧 | 搜索（ES 主，PG 降级）—— G4 |
-| POST | `/views` | ✅ | 阅读量打点（**幂等、永不报错、返回 204**） |
-| GET | `/comments?postId=` | ✅ | 已审核留言 |
-| POST | `/comments` | ✅ | 提交留言（默认 `PENDING`） |
-| GET | `/export` | ✅ | 全量导出（Token 鉴权） |
+| POST | `/views` | 🚧 | 阅读量打点（**幂等、永不报错、返回 204**） |
+| GET | `/comments?postId=` | 🚧 | 已审核留言 |
+| POST | `/comments` | 🚧 | 提交留言（默认 `PENDING`） |
+| GET | `/export` | 🚧 | 全量导出（Token 鉴权） |
 
 > **RSS / sitemap 不在后端** —— 由 Next.js 在构建时生成，零运行时开销。
 
@@ -205,11 +207,11 @@ Header: X-Export-Token: <token>
 | 分组 | 端点 | 状态 |
 |------|------|:--:|
 | 认证 | `POST /auth/login`、`POST /auth/logout`、`GET /auth/me` | ✅ |
-| 文章 | `GET/POST /posts`、`GET/PATCH/DELETE /posts/{id}`、`POST /posts/{id}/publish`、`/archive`、`/restore`、`/schedule`、`/cancel-schedule`、`/preview`、`POST /posts/slug-suggest` | ✅ |
-| 动态 | `GET/POST /notes`、`GET/PATCH/DELETE /notes/{id}`、`POST /notes/{id}/archive`、`/restore` | ✅ |
-| 媒体 | `POST /assets`（multipart 上传）、`GET /assets`、`DELETE /assets/{id}` | ✅ |
-| 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | ✅ |
-| 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | ✅ |
+| 文章 | `GET/POST /posts`、`GET/PATCH/DELETE /posts/{id}`、`POST /posts/{id}/publish`、`/archive`、`/restore`、`/schedule`、`/cancel-schedule`、`/preview`、`POST /posts/slug-suggest` | 🚧 |
+| 动态 | `GET/POST /notes`、`GET/PATCH/DELETE /notes/{id}`、`POST /notes/{id}/archive`、`/restore` | 🚧 |
+| 媒体 | `POST /assets`（multipart 上传）、`GET /assets`、`DELETE /assets/{id}` | 🚧 |
+| 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | 🚧 |
+| 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | 🚧 |
 | 站点配置 | `GET/PUT /site-config` | 🚧 待做（目前站点信息来自配置文件） |
 | 构建 | `GET /builds`、`POST /builds/trigger`（手动触发） | 🚧 待做（`site_builds` 表已在写数据，缺只读接口与手动触发） |
 | 统计 | `GET /stats`（阅读量 / AI 成本 / 内存快照） | 🚧 待做 |
