@@ -23,10 +23,15 @@ class SlugifyTest {
     }
 
     @Test
-    fun `中文标题走哈希兜底且结果稳定`() {
-        val slug = Slugify.from("你好世界")
-        assertTrue(slug.startsWith("p-"), "中文标题应走 p- 前缀的哈希兜底，实际是 $slug")
-        assertEquals(slug, Slugify.from("你好世界"), "同一标题必须得到同一 slug")
+    fun `中文标题转成拼音`() {
+        assertEquals("ni-hao-shi-jie", Slugify.from("你好世界"))
+    }
+
+    @Test
+    fun `转不出拼音时走哈希兜底且结果稳定`() {
+        val slug = Slugify.from("!!!")
+        assertTrue(slug.startsWith("p-"), "纯符号标题应走 p- 前缀的哈希兜底，实际是 $slug")
+        assertEquals(slug, Slugify.from("!!!"), "同一标题必须得到同一 slug")
     }
 
     @Test
@@ -35,10 +40,9 @@ class SlugifyTest {
     }
 
     @Test
-    fun `中英混排时保留 ASCII 部分`() {
-        // 中文被当作非字母数字剥掉，剩下 ASCII 主体
+    fun `中英混排时 ASCII 原样保留、中文转拼音`() {
         assertEquals("kotlin", Slugify.ascii("Kotlin 协程"))
-        assertEquals("kotlin", Slugify.from("Kotlin 协程"))
+        assertEquals("kotlin-xie-cheng", Slugify.from("Kotlin 协程"))
     }
 
     @Test
