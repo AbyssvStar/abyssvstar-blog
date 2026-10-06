@@ -43,6 +43,9 @@ dependencies {
     // Markdown 渲染。预览和发布必须走同一个实例，否则「所见即所得」是假的
     implementation("org.commonmark:commonmark:0.24.0")
 
+    // 中文标题转拼音，用来生成 slug。单个 jar，无传递依赖
+    implementation("com.belerweb:pinyin4j:2.5.1")
+
     // 密码哈希：只用到 spring-security-crypto（BCrypt），不引入整个 Spring Security
     implementation("org.springframework.security:spring-security-crypto")
 
