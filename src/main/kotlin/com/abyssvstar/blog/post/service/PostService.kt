@@ -1,0 +1,244 @@
+package com.abyssvstar.blog.post.service
+
+import com.abyssvstar.blog.post.domain.Post
+import com.abyssvstar.blog.post.domain.PostPublication
+import com.abyssvstar.blog.post.domain.PostStatus
+import com.abyssvstar.blog.post.repository.PostPublicationRepository
+import com.abyssvstar.blog.post.repository.PostRepository
+import com.abyssvstar.blog.post.web.dto.CreatePostRequest
+import com.abyssvstar.blog.post.web.dto.PostResponse
+import com.abyssvstar.blog.post.web.dto.PostSummaryResponse
+import com.abyssvstar.blog.post.web.dto.PublicPostResponse
+import com.abyssvstar.blog.post.web.dto.PublicPostSummaryResponse
+import com.abyssvstar.blog.post.web.dto.UpdatePostRequest
+import com.abyssvstar.blog.shared.util.Hashing
+import com.abyssvstar.blog.shared.util.Slugify
+import com.abyssvstar.blog.shared.web.BusinessException
+import com.abyssvstar.blog.shared.web.ErrorCode
+import com.abyssvstar.blog.shared.web.PageData
+import com.abyssvstar.blog.taxonomy.service.TagService
+import com.fasterxml.jackson.databind.ObjectMapper
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+
+/**
+ * 文章工作副本的读写。
+ *
+ * 这里只碰工作副本，不碰发布快照 —— 发布是另一条路，见 docs/04 §4。
+ * 自动保存走 [update]，它不触发构建、不推 ES，只写这一张表。
+ */
+@Service
+class PostService(
+    private val posts: PostRepository,
+    private val publications: PostPublicationRepository,
+    private val tags: TagService,
+    private val objectMapper: ObjectMapper,
+) {
+
+    // ---------- 后台 ----------
+
+    fun listForAdmin(page: Int, size: Int): PageData<PostSummaryResponse> {
+        val result = posts.pageAll(page, size)
+        val ids = result.records.mapNotNull { it.id }
+
+        // 批量取，避免逐篇查标签和发布快照
+        val tagMap = tags.tagNamesOf(ids)
+        val pubMap = publications.findByPostIds(ids)
+
+        val items = result.records.map { post ->
+            val names = tagMap[post.id] ?: emptyList()
+            post.toSummary(names, isStale(post, names, pubMap[post.id]))
+        }
+        return PageData.of(items, page, size, result.total)
+    }
+
+    fun getForAdmin(id: Long): PostResponse {
+        val post = posts.findById(id) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
+        val names = tags.tagNamesOf(id)
+        return post.toResponse(names, isStale(post, names, publications.findByPostId(id)))
+    }
+
+    @Transactional
+    fun create(req: CreatePostRequest): PostResponse {
+        val post = Post(
+            slug = resolveSlug(req.slug, req.title, null),
+            title = req.title,
+            summary = req.summary,
+            contentMd = req.contentMd,
+            coverAssetId = req.coverAssetId,
+            visibility = req.visibility,
+            status = PostStatus.DRAFT,
+        )
+        posts.insert(post)
+        val id = requireNotNull(post.id) { "插入后应当拿到自增主键" }
+
+        tags.replaceTags(id, req.tags)
+        return getForAdmin(id)
+    }
+
+    @Transactional
+    fun update(id: Long, req: UpdatePostRequest): PostResponse {
+        val post = posts.findById(id) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
+
+        // 把实体上的版本换成客户端带来的那个：MyBatis-Plus 会用它拼 WHERE version = ?
+        // 对不上就是 0 行，说明这份内容在别处已经被改过了
+        post.version = req.version
+
+        req.title?.let { post.title = it }
+        // 摘要传空串表示清空，否则没法把已有摘要去掉
+        req.summary?.let { post.summary = it.ifBlank { null } }
+        req.contentMd?.let { post.contentMd = it }
+        req.coverAssetId?.let { post.coverAssetId = it }
+        req.visibility?.let { post.visibility = it }
+        req.slug?.let { post.slug = resolveSlug(it, post.title, id) }
+
+        if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
+        req.tags?.let { tags.replaceTags(id, it) }
+
+        return getForAdmin(id)
+    }
+
+    /**
+     * 删除。
+     *
+     * 工作副本是软删（误删还能恢复），发布快照直接删掉 —— 目的是让它立刻从线上消失。
+     */
+    @Transactional
+    fun delete(id: Long) {
+        posts.findById(id) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
+        posts.softDelete(id)
+        publications.deleteByPostId(id)
+    }
+
+    /** 按标题给一个当前没被占用的 slug。前端可以在用户手改之前先填上。 */
+    fun suggestSlug(title: String): String {
+        val base = Slugify.from(title).ifBlank { return "" }
+        if (!posts.isSlugTaken(base)) return base
+        for (n in 2..MAX_SLUG_ATTEMPTS) {
+            val candidate = "$base-$n"
+            if (!posts.isSlugTaken(candidate)) return candidate
+        }
+        return base
+    }
+
+    // ---------- 公开 ----------
+
+    /** 公开列表。可见性判定全部交给 PostRepository 里的 PublishedContentSpec。 */
+    fun listPublic(page: Int, size: Int): PageData<PublicPostSummaryResponse> {
+        val result = posts.pagePublic(page, size)
+        val pubMap = publications.findByPostIds(result.records.mapNotNull { it.id })
+        val items = result.records.mapNotNull { post -> pubMap[post.id]?.toPublicSummary() }
+        return PageData.of(items, page, size, result.total)
+    }
+
+    fun getPublic(slug: String): PublicPostResponse {
+        val post = posts.findPublicBySlug(slug) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
+        val publication = publications.findByPostId(requireNotNull(post.id))
+            ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
+        return publication.toPublic()
+    }
+
+    // ---------- 内部 ----------
+
+    /**
+     * 手填的 slug 撞车直接报错；自动生成的撞车就加序号。
+     *
+     * 理由：手填是明确意图，悄悄改名会让人以为保存成功了；自动生成只是省事，加个序号更顺手。
+     */
+    private fun resolveSlug(requested: String?, title: String, excludeId: Long?): String {
+        val manual = requested?.trim()?.takeIf { it.isNotEmpty() }
+        val base = manual ?: Slugify.from(title).ifBlank {
+            throw BusinessException(ErrorCode.VALIDATION_FAILED, "无法从标题生成 slug，请手动指定")
+        }
+        if (!posts.isSlugTaken(base, excludeId)) return base
+        if (manual != null) throw BusinessException(ErrorCode.SLUG_TAKEN)
+
+        for (n in 2..MAX_SLUG_ATTEMPTS) {
+            val candidate = "$base-$n"
+            if (!posts.isSlugTaken(candidate, excludeId)) return candidate
+        }
+        throw BusinessException(ErrorCode.SLUG_TAKEN)
+    }
+
+    /** 工作副本与发布快照是否不一致。从没发布过也算「还没上线」。 */
+    private fun isStale(post: Post, tagNames: List<String>, publication: PostPublication?): Boolean =
+        publication == null || publication.sourceHash != sourceHash(post, tagNames)
+
+    private fun sourceHash(post: Post, tagNames: List<String>): String = Hashing.sha256Hex(
+        listOf(
+            post.title,
+            post.summary.orEmpty(),
+            post.contentMd,
+            post.slug,
+            tagNames.sorted().joinToString(","),
+            post.coverAssetId?.toString().orEmpty(),
+        ).joinToString(FIELD_SEPARATOR),
+    )
+
+    private fun parseTags(json: String): List<String> =
+        runCatching { objectMapper.readValue(json, Array<String>::class.java).toList() }
+            .getOrDefault(emptyList())
+
+    private fun Post.toResponse(tagNames: List<String>, stale: Boolean) = PostResponse(
+        id = requireNotNull(id),
+        slug = slug,
+        title = title,
+        summary = summary,
+        contentMd = contentMd,
+        coverAssetId = coverAssetId,
+        status = status,
+        visibility = visibility,
+        publishAt = publishAt,
+        publishedAt = publishedAt,
+        lastPublishedAt = lastPublishedAt,
+        viewCount = viewCount,
+        version = version,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        tags = tagNames,
+        hasUnpublishedChanges = stale,
+    )
+
+    private fun Post.toSummary(tagNames: List<String>, stale: Boolean) = PostSummaryResponse(
+        id = requireNotNull(id),
+        slug = slug,
+        title = title,
+        summary = summary,
+        status = status,
+        visibility = visibility,
+        publishedAt = publishedAt,
+        updatedAt = updatedAt,
+        version = version,
+        tags = tagNames,
+        hasUnpublishedChanges = stale,
+    )
+
+    private fun PostPublication.toPublic() = PublicPostResponse(
+        slug = slug,
+        title = title,
+        summary = summary,
+        html = html,
+        coverUrl = coverUrl,
+        tags = parseTags(tags),
+        wordCount = wordCount,
+        readingMinutes = readingMinutes,
+        publishedAt = publishedAt,
+    )
+
+    private fun PostPublication.toPublicSummary() = PublicPostSummaryResponse(
+        slug = slug,
+        title = title,
+        summary = summary,
+        coverUrl = coverUrl,
+        tags = parseTags(tags),
+        readingMinutes = readingMinutes,
+        publishedAt = publishedAt,
+    )
+
+    private companion object {
+        const val MAX_SLUG_ATTEMPTS = 50
+
+        /** 拼接各字段算哈希时用的分隔符。用不可见字符，避免字段内容把它拼出来 */
+        const val FIELD_SEPARATOR = "\u0000"
+    }
+}
