@@ -40,6 +40,9 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    // Markdown 渲染。预览和发布必须走同一个实例，否则「所见即所得」是假的
+    implementation("org.commonmark:commonmark:0.24.0")
+
     // 密码哈希：只用到 spring-security-crypto（BCrypt），不引入整个 Spring Security
     implementation("org.springframework.security:spring-security-crypto")
 
