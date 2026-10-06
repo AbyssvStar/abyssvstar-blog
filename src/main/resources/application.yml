@@ -42,6 +42,8 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    # 枚举按 name() 存取。各列的 CHECK 约束取值与枚举名一一对应，不需要额外注解。
+    default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
   global-config:
     banner: false
     db-config:
