@@ -198,7 +198,7 @@ Header: X-Export-Token: <token>
 | POST | `/views` | 🚧 | 阅读量打点（**幂等、永不报错、返回 204**） |
 | GET | `/comments?postId=` | 🚧 | 已审核留言 |
 | POST | `/comments` | 🚧 | 提交留言（默认 `PENDING`） |
-| GET | `/export` | 🚧 | 全量导出（Token 鉴权） |
+| GET | `/export` | ✅ | 全量导出（Token 鉴权；带 ETag，内容没变回 304） |
 
 > **RSS / sitemap 不在后端** —— 由 Next.js 在构建时生成，零运行时开销。
 

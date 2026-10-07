@@ -85,6 +85,9 @@ blog:
     cookie-name: BLOG_SESSION
     ttl: 7d
     secure: ${BLOG_COOKIE_SECURE:true}
+  export:
+    # 只从环境变量来，不留默认值。为空时导出接口拒绝服务，而不是裸奔
+    token: ${BLOG_EXPORT_TOKEN:}
   rate-limit:
     # 可以关闭限流
     enabled: ${BLOG_RATE_LIMIT_ENABLED:true}

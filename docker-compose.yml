@@ -117,6 +117,8 @@ services:
       BLOG_ADMIN_USERNAME: ${BLOG_ADMIN_USERNAME:-admin}
       BLOG_ADMIN_PASSWORD: ${BLOG_ADMIN_PASSWORD:?BLOG_ADMIN_PASSWORD 必须设置}
       BLOG_COOKIE_SECURE: ${BLOG_COOKIE_SECURE:-true}
+      # 不给默认值。为空时导出接口拒绝服务，但应用照常启动
+      BLOG_EXPORT_TOKEN: ${BLOG_EXPORT_TOKEN:-}
       JAVA_TOOL_OPTIONS: "-Xmx512m -XX:MaxMetaspaceSize=160m -XX:+UseSerialGC -Djava.awt.headless=true -Duser.timezone=Asia/Shanghai"
     ports:
       - "127.0.0.1:8080:8080"
