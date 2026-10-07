@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, ApiError, Code } from '../api/client'
+import { ApiError, Code } from '../api/client'
+import { postsApi } from '../api/posts'
 import type { PageData, PostSummary } from '../api/types'
 
 const STATUS_LABEL: Record<PostSummary['status'], string> = {
@@ -11,19 +12,26 @@ const STATUS_LABEL: Record<PostSummary['status'], string> = {
 
 const PAGE_SIZE = 20
 
-export function PostListPage({ onUnauthenticated }: { onUnauthenticated: () => void }) {
+export function PostListPage({
+  onUnauthenticated,
+  onOpen,
+}: {
+  onUnauthenticated: () => void
+  onOpen: (id: number) => void
+}) {
   const [data, setData] = useState<PageData<PostSummary> | null>(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    api
-      .get<PageData<PostSummary>>(`/posts?page=${page}&size=${PAGE_SIZE}`)
+    postsApi
+      .list(page, PAGE_SIZE)
       .then((d) => {
         if (!cancelled) setData(d)
       })
@@ -45,12 +53,37 @@ export function PostListPage({ onUnauthenticated }: { onUnauthenticated: () => v
     }
   }, [page, onUnauthenticated])
 
+  async function create() {
+    setCreating(true)
+    setError(null)
+    try {
+      const created = await postsApi.create({ title: '未命名文章' })
+      onOpen(created.id)
+    } catch (err) {
+      setError(err instanceof ApiError ? `${err.message}（${err.code}）` : '新建失败')
+    } finally {
+      setCreating(false)
+    }
+  }
+
   if (loading && !data) return <Hint>加载中…</Hint>
   if (error) return <Hint danger>{error}</Hint>
   if (!data) return null
 
   if (data.total === 0) {
-    return <Hint>还没有文章。新建与编辑器是下一批。</Hint>
+    return (
+      <div>
+        <Hint>还没有文章。</Hint>
+        <button
+          onClick={() => void create()}
+          disabled={creating}
+          className="mt-3 rounded px-3 py-1.5 text-sm disabled:opacity-40"
+          style={{ background: 'var(--accent)', color: '#0a0a0b' }}
+        >
+          {creating ? '新建中…' : '新建文章'}
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -59,9 +92,19 @@ export function PostListPage({ onUnauthenticated }: { onUnauthenticated: () => v
         <h1 className="text-lg font-medium">
           文章 <span style={{ color: 'var(--text-muted)' }}>{data.total}</span>
         </h1>
-        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          第 {data.page} / {Math.max(1, data.totalPages)} 页
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            第 {data.page} / {Math.max(1, data.totalPages)} 页
+          </span>
+          <button
+            onClick={() => void create()}
+            disabled={creating}
+            className="rounded px-3 py-1 text-sm disabled:opacity-40"
+            style={{ background: 'var(--accent)', color: '#0a0a0b' }}
+          >
+            {creating ? '新建中…' : '新建'}
+          </button>
+        </div>
       </div>
 
       <table className="w-full border-collapse text-sm">
@@ -94,7 +137,12 @@ export function PostListPage({ onUnauthenticated }: { onUnauthenticated: () => v
                     ●
                   </span>
                 )}
-                {post.title}
+                <button
+                  onClick={() => onOpen(post.id)}
+                  className="text-left hover:underline"
+                >
+                  {post.title}
+                </button>
                 <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
                   {post.slug}
                 </div>
