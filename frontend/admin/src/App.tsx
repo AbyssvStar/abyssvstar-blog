@@ -4,6 +4,7 @@ import type { Me } from './api/types'
 import { LoginPage } from './pages/LoginPage'
 import { PostListPage } from './pages/PostListPage'
 import { EditorPage } from './pages/EditorPage'
+import { applyTheme, currentTheme, type Theme } from './theme'
 
 export function App() {
   const [me, setMe] = useState<Me | null>(null)
@@ -29,13 +30,22 @@ export function App() {
 
   if (booting) {
     return (
-      <div className="flex min-h-screen items-center justify-center" style={{ color: 'var(--text-muted)' }}>
+      <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }} className="muted">
         加载中…
       </div>
     )
   }
 
-  if (!me) return <LoginPage onLoggedIn={setMe} />
+  if (!me) {
+    return (
+      <>
+        <div style={{ position: 'fixed', right: 16, top: 16 }}>
+          <ThemeToggle />
+        </div>
+        <LoginPage onLoggedIn={setMe} />
+      </>
+    )
+  }
 
   return (
     <Shell
@@ -67,27 +77,61 @@ function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
   }
 
   return (
-    <div className="min-h-screen">
-      <header
-        className="flex items-center justify-between border-b px-6 py-3"
-        style={{ borderColor: 'var(--border)' }}
-      >
-        <span className="font-medium">AbyssvStar 后台</span>
-        <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--text-muted)' }}>
-          <span>{me.username}</span>
-          <button onClick={logout} disabled={busy} className="underline disabled:opacity-40">
-            登出
-          </button>
+    <div className="app">
+      <aside className="sidebar">
+        <div className="sidebar__brand">
+          <span className="sidebar__mark" />
+          AbyssvStar
         </div>
-      </header>
+        <nav className="nav">
+          <button
+            className={`nav__item${editingId === null ? ' nav__item--active' : ''}`}
+            onClick={() => setEditingId(null)}
+          >
+            文章
+          </button>
+          {editingId !== null && <span className="nav__item nav__item--active">编辑中</span>}
+        </nav>
+      </aside>
 
-      <main className="mx-auto max-w-4xl p-6">
-        {editingId === null ? (
-          <PostListPage onUnauthenticated={onLoggedOut} onOpen={setEditingId} />
-        ) : (
-          <EditorPage postId={editingId} onBack={() => setEditingId(null)} />
-        )}
-      </main>
+      <div className="main">
+        <header className="topbar">
+          <span className="topbar__title">{editingId === null ? '文章' : '编辑文章'}</span>
+          <div className="topbar__right">
+            <ThemeToggle />
+            <span className="muted" style={{ fontSize: 13 }}>
+              {me.username}
+            </span>
+            <button className="btn btn--ghost" onClick={() => void logout()} disabled={busy}>
+              登出
+            </button>
+          </div>
+        </header>
+
+        <div className="content">
+          {editingId === null ? (
+            <PostListPage onUnauthenticated={onLoggedOut} onOpen={setEditingId} />
+          ) : (
+            <EditorPage postId={editingId} onBack={() => setEditingId(null)} />
+          )}
+        </div>
+      </div>
     </div>
+  )
+}
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState<Theme>(currentTheme)
+
+  function toggle() {
+    const next: Theme = theme === 'dark' ? 'light' : 'dark'
+    applyTheme(next)
+    setTheme(next)
+  }
+
+  return (
+    <button className="theme-toggle" onClick={toggle} title="切换主题">
+      {theme === 'dark' ? '☾ 深色' : '☀ 浅色'}
+    </button>
   )
 }

@@ -26,52 +26,51 @@ export function LoginPage({ onLoggedIn }: { onLoggedIn: (me: Me) => void }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <form
-        onSubmit={submit}
-        className="w-80 rounded-lg border p-6"
-        style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)' }}
-      >
-        <h1 className="mb-6 text-lg font-medium">后台登录</h1>
+    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', padding: 16 }}>
+      <form onSubmit={submit} className="panel" style={{ width: 320 }}>
+        <div className="panel__header">
+          <span className="panel__title">登录</span>
+        </div>
+        <div className="panel__body">
+          <label className="field-label" htmlFor="u">
+            用户名
+          </label>
+          <input
+            id="u"
+            className="field"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            autoFocus
+            style={{ marginBottom: 12 }}
+          />
 
-        <label className="mb-1 block text-sm" style={{ color: 'var(--text-muted)' }}>
-          用户名
-        </label>
-        <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          autoComplete="username"
-          autoFocus
-          className="mb-4 w-full rounded border px-3 py-2 outline-none"
-          style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-        />
+          <label className="field-label" htmlFor="p">
+            密码
+          </label>
+          <input
+            id="p"
+            type="password"
+            className="field"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            style={{ marginBottom: 14 }}
+          />
 
-        <label className="mb-1 block text-sm" style={{ color: 'var(--text-muted)' }}>
-          密码
-        </label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          className="mb-4 w-full rounded border px-3 py-2 outline-none"
-          style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-        />
+          {error && (
+            <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12, marginTop: 0 }}>{error}</p>
+          )}
 
-        {error && (
-          <p className="mb-4 text-sm" style={{ color: 'var(--danger)' }}>
-            {error}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={busy || !username || !password}
-          className="w-full rounded py-2 font-medium disabled:opacity-40"
-          style={{ background: 'var(--accent)', color: '#0a0a0b' }}
-        >
-          {busy ? '登录中…' : '登录'}
-        </button>
+          <button
+            type="submit"
+            disabled={busy || !username || !password}
+            className="btn btn--primary"
+            style={{ justifyContent: 'center', padding: '7px 10px', width: '100%' }}
+          >
+            {busy ? '登录中…' : '登录'}
+          </button>
+        </div>
       </form>
     </div>
   )
