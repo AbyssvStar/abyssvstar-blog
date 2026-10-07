@@ -208,7 +208,7 @@ Header: X-Export-Token: <token>
 |------|------|:--:|
 | 认证 | `POST /auth/login`、`POST /auth/logout`、`GET /auth/me` | ✅ |
 | 文章 | `GET/POST /posts`、`GET/PATCH/DELETE /posts/{id}`、`POST /posts/{id}/publish`、`/archive`、`/restore`、`/preview`、`POST /posts/slug-suggest` | ✅ |
-| 文章·排期 | `POST /posts/{id}/schedule`、`/cancel-schedule` | 🚧 定时发布任务还没写 |
+| 文章·排期 | `POST /posts/{id}/schedule`、`/cancel-schedule` | ✅ 每分钟扫描，到点自动发布 |
 | 动态 | `GET/POST /notes`、`GET/PATCH/DELETE /notes/{id}`、`POST /notes/{id}/archive`、`/restore` | 🚧 |
 | 媒体 | `POST /assets`（multipart 上传）、`GET /assets`、`DELETE /assets/{id}` | 🚧 |
 | 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | 🚧 |
@@ -247,10 +247,11 @@ com.abyssvstar.blog
 │   ├── persistence/            基础实体、审计字段
 │   └── util/                   拼音、Markdown 渲染、哈希
 ├── post/                       文章模块
-│   ├── web/                    PostController、AdminPostController、DTO
-│   ├── service/                PostService、PublishService、SlugService、AutoSaveService
-│   ├── repository/             PostRepository、PostPublicationRepository
-│   └── domain/                 Post、PostPublication、PostStatus、Visibility
+│   ├── web/                    AdminPostController、PublicPostController、dto/
+│   ├── service/                PostService（含 slug 与自动保存）、PublishService、
+│   │                           ScheduledPublisher、PostSourceHash
+│   ├── repository/             PostRepository、PostPublicationRepository、PublishedContentSpec
+│   └── domain/                 Post、PostPublication、PostStatus
 ├── note/                       短动态模块
 ├── taxonomy/                   标签模块
 ├── media/                      图片模块（上传、缩略图、孤儿清理）
@@ -263,6 +264,7 @@ com.abyssvstar.blog
 ├── ai/                         AI 模块（摘要、标签、相关文章、RAG）
 ├── metrics/                    阅读量聚合、AI 成本统计
 ├── sitebuild/                  静态站构建触发（防抖、状态跟踪）
+├── export/                     CI 全量导出（Token 鉴权、ETag）
 └── admin/                      后台 UI 资源与页面入口
 ```
 

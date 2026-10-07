@@ -64,6 +64,12 @@ data class SlugSuggestResponse(
     val slug: String,
 )
 
+/** 排期发布。时间必须是未来，否则报 30003。 */
+data class SchedulePostRequest(
+    @field:NotNull(message = "缺少 publishAt")
+    val publishAt: Instant,
+)
+
 /** 后台的文章详情。 */
 data class PostResponse(
     val id: Long,

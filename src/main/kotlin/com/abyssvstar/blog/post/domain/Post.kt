@@ -2,6 +2,7 @@ package com.abyssvstar.blog.post.domain
 
 import com.abyssvstar.blog.shared.domain.EsSyncStatus
 import com.abyssvstar.blog.shared.domain.Visibility
+import com.baomidou.mybatisplus.annotation.FieldStrategy
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
@@ -27,7 +28,9 @@ data class Post(
     @TableField("title")
     var title: String = "",
 
-    @TableField("summary")
+    // MyBatis-Plus 默认不把 null 字段写进 UPDATE，「清空摘要」就会静默失效。
+    // 这两个字段的 null 是有意义的，所以用 IGNORED 强制写入。
+    @TableField(value = "summary", updateStrategy = FieldStrategy.IGNORED)
     var summary: String? = null,
 
     @TableField("content_md")
@@ -42,7 +45,7 @@ data class Post(
     @TableField("visibility")
     var visibility: Visibility = Visibility.PUBLIC,
 
-    @TableField("publish_at")
+    @TableField(value = "publish_at", updateStrategy = FieldStrategy.IGNORED)
     var publishAt: Instant? = null,
 
     @TableField("published_at")

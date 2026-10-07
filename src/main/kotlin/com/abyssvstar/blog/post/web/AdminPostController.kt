@@ -7,6 +7,7 @@ import com.abyssvstar.blog.post.web.dto.PostResponse
 import com.abyssvstar.blog.post.web.dto.PostSummaryResponse
 import com.abyssvstar.blog.post.web.dto.PreviewRequest
 import com.abyssvstar.blog.post.web.dto.PreviewResponse
+import com.abyssvstar.blog.post.web.dto.SchedulePostRequest
 import com.abyssvstar.blog.post.web.dto.SlugSuggestRequest
 import com.abyssvstar.blog.post.web.dto.SlugSuggestResponse
 import com.abyssvstar.blog.post.web.dto.UpdatePostRequest
@@ -78,6 +79,17 @@ class AdminPostController(
     @PostMapping("/{id}/restore")
     fun restore(@PathVariable id: Long): ApiResponse<PostResponse> =
         ApiResponse.ok(publishService.restore(id))
+
+    /** 排期。到点由每分钟的定时任务走与手动发布完全相同的流程。 */
+    @PostMapping("/{id}/schedule")
+    fun schedule(
+        @PathVariable id: Long,
+        @Valid @RequestBody body: SchedulePostRequest,
+    ): ApiResponse<PostResponse> = ApiResponse.ok(publishService.schedule(id, body.publishAt))
+
+    @PostMapping("/{id}/cancel-schedule")
+    fun cancelSchedule(@PathVariable id: Long): ApiResponse<PostResponse> =
+        ApiResponse.ok(publishService.cancelSchedule(id))
 
     /** 实时预览。没有副作用：不写库、不碰快照、不触发构建。 */
     @PostMapping("/{id}/preview")
