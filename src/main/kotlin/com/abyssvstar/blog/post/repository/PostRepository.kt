@@ -35,6 +35,10 @@ class PostRepository(private val mapper: PostMapper) {
             PublishedContentSpec.wrapper().orderByDesc("published_at", "id"),
         )
 
+    /** 全部公开可见的文章，顺序固定。导出接口用它 —— 顺序不稳，ETag 就不稳，304 会失效。 */
+    fun findAllPublic(): List<Post> =
+        mapper.selectList(PublishedContentSpec.wrapper().orderByDesc("published_at", "id"))
+
     /** 后台列表：全部未删除的文章，按最后修改时间倒序。 */
     fun pageAll(page: Int, size: Int): Page<Post> =
         mapper.selectPage(
