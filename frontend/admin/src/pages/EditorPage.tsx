@@ -3,19 +3,29 @@ import { ApiError, Code } from '../api/client'
 import { parseTags, postsApi } from '../api/posts'
 import type { PostDetail, PreviewResponse } from '../api/types'
 
-/**
- * 自动保存的等待时间。编辑器内容变化后这么久没有新输入才保存。
- * docs/04 §5 定的是 30 秒。
- */
+/** 自动保存：停止输入多久之后写一次（docs/04 §5 定的是 30 秒） */
 const AUTOSAVE_DELAY_MS = 30_000
 
 /**
- * 预览的等待时间。比自动保存短得多 —— 预览是一次无副作用的纯渲染，
- * 而且「改完立刻看到效果」正是它存在的理由。
+ * 预览的防抖。比自动保存短得多 —— 预览是一次无副作用的纯渲染，
+ * 而「改完立刻看到效果」正是它存在的理由。
  */
-const PREVIEW_DELAY_MS = 800
+const PREVIEW_DELAY_MS = 600
+
+/** slug 跟随标题时的防抖。这个要调接口，不能每次按键都打 */
+const SLUG_DELAY_MS = 800
 
 const MAX_TAGS = 5
+
+interface Draft {
+  title: string
+  summary: string
+  contentMd: string
+  tagsText: string
+  slug: string
+}
+
+const EMPTY_DRAFT: Draft = { title: '', summary: '', contentMd: '', tagsText: '', slug: '' }
 
 /**
  * 保存状态。
@@ -35,66 +45,61 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
   const [post, setPost] = useState<PostDetail | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
+  // 这些只是为了渲染；参与保存/预览逻辑的一律读 draftRef
   const [title, setTitle] = useState('')
   const [summary, setSummary] = useState('')
   const [contentMd, setContentMd] = useState('')
   const [tagsText, setTagsText] = useState('')
+  const [slug, setSlug] = useState('')
 
   const [save, setSave] = useState<SaveState>({ kind: 'clean' })
   const [preview, setPreview] = useState<PreviewResponse | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
-
   const [publishError, setPublishError] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
 
-  // 这些放 ref 里：它们参与保存逻辑，但变化时不该触发重渲染或副作用
+  /**
+   * 草稿的最新值。
+   *
+   * **防抖回调必须从这里读，不能闭包捕获 state。**
+   * 捕获 state 的话，定时器在「上一次渲染」的作用域里跑，读到的永远是上一次的值 ——
+   * 表现就是预览慢一拍：改完没反应，再改一次才动。
+   */
+  const draftRef = useRef<Draft>({ ...EMPTY_DRAFT })
   const versionRef = useRef(0)
-  const timerRef = useRef<number | null>(null)
-  const previewTimerRef = useRef<number | null>(null)
+  const dirtyRef = useRef(false)
   const inFlightRef = useRef(false)
-  // 一旦发生冲突就停止自动保存，等人来处理 —— 继续自动写只会不断覆盖别人的修改
+  // 一旦冲突就停止自动保存，等人处理 —— 继续写只会不断覆盖别人的修改
   const conflictRef = useRef(false)
+  // 用户手动改过 slug 之后，它就不再跟随标题
+  const slugTouchedRef = useRef(false)
 
-  function applyLoaded(p: PostDetail) {
-    setPost(p)
-    setTitle(p.title)
-    setSummary(p.summary ?? '')
-    setContentMd(p.contentMd)
-    setTagsText(p.tags.join(', '))
-    versionRef.current = p.version
-  }
+  const saveTimer = useRef<number | null>(null)
+  const previewTimer = useRef<number | null>(null)
+  const slugTimer = useRef<number | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    postsApi
-      .get(postId)
-      .then((p) => {
-        if (!cancelled) applyLoaded(p)
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) setLoadError(err instanceof ApiError ? err.message : '加载失败')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [postId])
+  // ---------- 只依赖 postId 的稳定回调 ----------
 
-  /** @return 是否真的保存成功。发布流程要靠它决定能不能继续。 */
   const doSave = useCallback(async (): Promise<boolean> => {
-    if (!post || inFlightRef.current || conflictRef.current) return false
+    if (inFlightRef.current || conflictRef.current) return false
     inFlightRef.current = true
     setSave({ kind: 'saving' })
+
+    const d = draftRef.current
     try {
-      const updated = await postsApi.update(post.id, {
-        title,
-        summary,
-        contentMd,
-        tags: parseTags(tagsText),
+      const updated = await postsApi.update(postId, {
+        title: d.title,
+        summary: d.summary,
+        contentMd: d.contentMd,
+        // 空 slug 就不发，交给后端保留原值
+        slug: d.slug.trim() || undefined,
+        tags: parseTags(d.tagsText),
         // 关键：带上版本。后端对不上就 409，而不是覆盖别人的修改
         version: versionRef.current,
       })
-      // 版本要从响应里取，不能用旧的 —— 每次成功保存后端都会 +1
+      // 版本从响应里取，不能用旧的 —— 每次成功保存后端都会 +1
       versionRef.current = updated.version
+      dirtyRef.current = false
       setSave({ kind: 'saved', at: new Date() })
       return true
     } catch (err) {
@@ -111,84 +116,163 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
     } finally {
       inFlightRef.current = false
     }
-  }, [post, title, summary, contentMd, tagsText])
+  }, [postId])
 
   const refreshPreview = useCallback(async () => {
-    if (!post) return
     try {
-      setPreview(await postsApi.preview(post.id, contentMd))
+      setPreview(await postsApi.preview(postId, draftRef.current.contentMd))
       setPreviewError(null)
     } catch (err) {
       setPreviewError(err instanceof ApiError ? err.message : '预览失败')
     }
-  }, [post, contentMd])
+  }, [postId])
+
+  const suggestSlug = useCallback(async () => {
+    const t = draftRef.current.title
+    if (!t.trim()) return
+    try {
+      const { slug: s } = await postsApi.suggestSlug(t)
+      if (!slugTouchedRef.current && s) {
+        draftRef.current.slug = s
+        setSlug(s)
+      }
+    } catch {
+      // slug 建议失败不该打断写作，静默即可
+    }
+  }, [postId])
 
   const scheduleSave = useCallback(() => {
     if (conflictRef.current) return
-    if (timerRef.current !== null) window.clearTimeout(timerRef.current)
-    timerRef.current = window.setTimeout(() => {
-      void doSave()
-    }, AUTOSAVE_DELAY_MS)
+    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current)
+    saveTimer.current = window.setTimeout(() => void doSave(), AUTOSAVE_DELAY_MS)
   }, [doSave])
 
   const schedulePreview = useCallback(() => {
-    if (previewTimerRef.current !== null) window.clearTimeout(previewTimerRef.current)
-    previewTimerRef.current = window.setTimeout(() => {
-      void refreshPreview()
-    }, PREVIEW_DELAY_MS)
+    if (previewTimer.current !== null) window.clearTimeout(previewTimer.current)
+    previewTimer.current = window.setTimeout(() => void refreshPreview(), PREVIEW_DELAY_MS)
   }, [refreshPreview])
 
-  // 首次加载完先渲染一次预览
+  const scheduleSlugSuggest = useCallback(() => {
+    if (slugTimer.current !== null) window.clearTimeout(slugTimer.current)
+    slugTimer.current = window.setTimeout(() => void suggestSlug(), SLUG_DELAY_MS)
+  }, [suggestSlug])
+
+  const applyDraft = useCallback(
+    (patch: Partial<Draft>, opts?: { preview?: boolean; followSlug?: boolean }) => {
+      Object.assign(draftRef.current, patch)
+      if (patch.title !== undefined) setTitle(patch.title)
+      if (patch.summary !== undefined) setSummary(patch.summary)
+      if (patch.contentMd !== undefined) setContentMd(patch.contentMd)
+      if (patch.tagsText !== undefined) setTagsText(patch.tagsText)
+      if (patch.slug !== undefined) setSlug(patch.slug)
+
+      dirtyRef.current = true
+      setSave({ kind: 'dirty' })
+      scheduleSave()
+      if (opts?.preview) schedulePreview()
+      if (opts?.followSlug && !slugTouchedRef.current) scheduleSlugSuggest()
+    },
+    [scheduleSave, schedulePreview, scheduleSlugSuggest],
+  )
+
+  const applyLoaded = useCallback((p: PostDetail) => {
+    const d: Draft = {
+      title: p.title,
+      summary: p.summary ?? '',
+      contentMd: p.contentMd,
+      tagsText: p.tags.join(', '),
+      slug: p.slug,
+    }
+    draftRef.current = d
+    versionRef.current = p.version
+    dirtyRef.current = false
+    setPost(p)
+    setTitle(d.title)
+    setSummary(d.summary)
+    setContentMd(d.contentMd)
+    setTagsText(d.tagsText)
+    setSlug(d.slug)
+  }, [])
+
+  // ---------- 生命周期 ----------
+
+  useEffect(() => {
+    let cancelled = false
+    postsApi
+      .get(postId)
+      .then((p) => {
+        if (!cancelled) applyLoaded(p)
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setLoadError(err instanceof ApiError ? err.message : '加载失败')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [postId, applyLoaded])
+
+  // 首次加载完渲染一次预览
   useEffect(() => {
     if (post) void refreshPreview()
-    // 只在切换文章时跑一次
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post?.id])
+  }, [post?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 离开页面时清掉待触发的定时器，免得对着已卸载的组件干活
+  // 关标签页 / 刷新时提醒
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (!dirtyRef.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
+
+  // 卸载时清掉所有待触发的定时器
   useEffect(() => {
     return () => {
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current)
-      if (previewTimerRef.current !== null) window.clearTimeout(previewTimerRef.current)
+      for (const t of [saveTimer, previewTimer, slugTimer]) {
+        if (t.current !== null) window.clearTimeout(t.current)
+      }
     }
   }, [])
 
-  function edit(setter: (v: string) => void) {
-    return (v: string) => {
-      setter(v)
-      setSave({ kind: 'dirty' })
-      scheduleSave()
-    }
-  }
+  // ---------- 动作 ----------
 
-  /** 正文改动除了自动保存，还要刷预览 */
-  function editContent(v: string) {
-    setContentMd(v)
-    setSave({ kind: 'dirty' })
-    scheduleSave()
-    schedulePreview()
+  /** 返回列表。有未保存的改动就先问一句 —— 自动保存有 30 秒延迟，这时候走人就丢稿 */
+  async function goBack() {
+    if (dirtyRef.current) {
+      const leave = window.confirm(
+        '有改动还没保存。\n\n点「确定」先保存再返回；点「取消」留在本页继续编辑。',
+      )
+      if (!leave) return
+      const ok = await doSave()
+      // 保存失败就别走，改动还在这个页面上
+      if (!ok) return
+    }
+    onBack()
   }
 
   /**
    * 发布。
    *
-   * **必须先保存再发布。** 自动保存有 30 秒延迟，用户打完字立刻点发布时，
+   * **有改动时必须先保存再发布。** 自动保存有 30 秒延迟，打完字立刻点发布的话，
    * 服务端的工作副本还是旧的 —— 直接调发布接口就会把旧内容发出去。
    */
   async function publish() {
-    if (!post) return
     setPublishing(true)
     setPublishError(null)
     try {
-      const saved = await doSave()
-      if (!saved) {
-        setPublishError('没能保存最新内容，已中止发布。先解决上面的保存问题。')
-        return
+      if (dirtyRef.current) {
+        const saved = await doSave()
+        if (!saved) {
+          setPublishError('没能保存最新内容，已中止发布。先解决上面的保存问题。')
+          return
+        }
       }
-      applyLoaded(await postsApi.publish(post.id))
+      applyLoaded(await postsApi.publish(postId))
       setSave({ kind: 'clean' })
     } catch (err) {
-      // 30007 缺摘要、30002 slug 撞车、30003 排期时间在过去
+      // 30007 缺摘要、30002 slug 撞车
       setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '发布失败')
     } finally {
       setPublishing(false)
@@ -196,13 +280,27 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
   }
 
   async function archive() {
-    if (!post) return
     setPublishing(true)
     setPublishError(null)
     try {
-      applyLoaded(await postsApi.archive(post.id))
+      applyLoaded(await postsApi.archive(postId))
+      setSave({ kind: 'clean' })
     } catch (err) {
       setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '归档失败')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  /** 恢复 = 后端重新发布一次，按当前工作副本重建快照（docs/04 §3.2） */
+  async function restore() {
+    setPublishing(true)
+    setPublishError(null)
+    try {
+      applyLoaded(await postsApi.restore(postId))
+      setSave({ kind: 'clean' })
+    } catch (err) {
+      setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '恢复失败')
     } finally {
       setPublishing(false)
     }
@@ -214,17 +312,19 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
     void postsApi.get(postId).then(applyLoaded)
   }
 
+  // ---------- 渲染 ----------
+
   if (loadError) return <p style={{ color: 'var(--danger)' }}>{loadError}</p>
   if (!post) return <p style={{ color: 'var(--text-muted)' }}>加载中…</p>
 
   const tags = parseTags(tagsText)
-  const canArchive = post.status === 'PUBLISHED'
-  const canRestore = post.status === 'ARCHIVED'
+  const archived = post.status === 'ARCHIVED'
+  const publishedNoChange = post.status === 'PUBLISHED' && !post.hasUnpublishedChanges
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <button onClick={onBack} className="text-sm underline" style={{ color: 'var(--text-muted)' }}>
+        <button onClick={() => void goBack()} className="text-sm underline" style={{ color: 'var(--text-muted)' }}>
           ← 返回列表
         </button>
         <SaveIndicator state={save} />
@@ -253,15 +353,37 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
 
       <input
         value={title}
-        onChange={(e) => edit(setTitle)(e.target.value)}
+        onChange={(e) => applyDraft({ title: e.target.value }, { followSlug: true })}
         placeholder="标题"
         className="mb-3 w-full rounded border px-3 py-2 text-lg outline-none"
         style={fieldStyle}
       />
 
+      <div className="mb-1 flex items-center gap-2">
+        <span className="shrink-0 text-xs" style={{ color: 'var(--text-muted)' }}>
+          URL
+        </span>
+        <input
+          value={slug}
+          onChange={(e) => {
+            // 手动改过之后就不再跟随标题 —— 这是「可手动覆盖」的落点
+            slugTouchedRef.current = true
+            applyDraft({ slug: e.target.value })
+          }}
+          placeholder="按标题自动生成"
+          className="w-full rounded border px-3 py-1.5 font-mono text-xs outline-none"
+          style={fieldStyle}
+        />
+      </div>
+      <p className="mb-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+        {slugTouchedRef.current
+          ? '已手动指定，不再跟随标题'
+          : '跟随标题自动生成（拼音）；手动改过之后就不再跟随'}
+      </p>
+
       <input
         value={summary}
-        onChange={(e) => edit(setSummary)(e.target.value)}
+        onChange={(e) => applyDraft({ summary: e.target.value })}
         placeholder="摘要（公开文章发布时必填，SEO 用）"
         className="mb-3 w-full rounded border px-3 py-2 text-sm outline-none"
         style={fieldStyle}
@@ -269,7 +391,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
 
       <input
         value={tagsText}
-        onChange={(e) => edit(setTagsText)(e.target.value)}
+        onChange={(e) => applyDraft({ tagsText: e.target.value })}
         placeholder="标签，逗号分隔，最多 5 个"
         className="mb-3 w-full rounded border px-3 py-2 text-sm outline-none"
         style={fieldStyle}
@@ -283,7 +405,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <textarea
           value={contentMd}
-          onChange={(e) => editContent(e.target.value)}
+          onChange={(e) => applyDraft({ contentMd: e.target.value }, { preview: true })}
           placeholder="用 Markdown 写正文…"
           spellCheck={false}
           className="rounded border px-3 py-2 font-mono text-sm outline-none"
@@ -307,7 +429,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
               {previewError}
             </p>
           ) : (
-            // 这份 HTML 是后端从**你自己的正文**渲染出来的，允许原始 HTML 通过是刻意的，
+            // 这份 HTML 是后端从**你自己的正文**渲染出来的。允许原始 HTML 通过是刻意的，
             // 见 shared/util/MarkdownRenderer.kt。等出现公开投稿入口时这里要重新评估。
             <div className="preview-body" dangerouslySetInnerHTML={{ __html: preview?.html ?? '' }} />
           )}
@@ -324,36 +446,41 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
           保存草稿
         </button>
 
-        <button
-          onClick={() => void publish()}
-          disabled={publishing || save.kind === 'conflict'}
-          className="rounded px-3 py-1.5 font-medium disabled:opacity-40"
-          style={{ background: 'var(--accent)', color: '#0a0a0b' }}
-        >
-          {publishing ? '发布中…' : post.status === 'PUBLISHED' ? '更新线上' : '发布'}
-        </button>
+        {/*
+          归档状态下不显示发布按钮：docs/04 §3.2 里 ARCHIVED 只到 PUBLISHED 一条路，
+          就是「恢复」。两个按钮做同一件事只会让人困惑，所以只留恢复。
+        */}
+        {archived ? (
+          <button
+            onClick={() => void restore()}
+            disabled={publishing}
+            className="rounded px-3 py-1.5 font-medium disabled:opacity-40"
+            style={{ background: 'var(--accent)', color: '#0a0a0b' }}
+          >
+            {publishing ? '恢复中…' : '恢复（重新发布）'}
+          </button>
+        ) : (
+          <button
+            onClick={() => void publish()}
+            disabled={publishing || save.kind === 'conflict' || publishedNoChange}
+            title={publishedNoChange ? '线上已是最新，没有需要发布的改动' : undefined}
+            className="rounded px-3 py-1.5 font-medium disabled:opacity-40"
+            style={{ background: 'var(--accent)', color: '#0a0a0b' }}
+          >
+            {publishing ? '处理中…' : post.status === 'PUBLISHED' ? '更新线上' : '发布'}
+          </button>
+        )}
 
-        {canArchive && (
+        {post.status === 'PUBLISHED' && (
           <button onClick={() => void archive()} disabled={publishing} className="underline disabled:opacity-40">
             归档
           </button>
         )}
-        {canRestore && (
-          <button
-            onClick={() => void postsApi.restore(post.id).then(applyLoaded).catch((e: unknown) =>
-              setPublishError(e instanceof ApiError ? e.message : '恢复失败'),
-            )}
-            disabled={publishing}
-            className="underline disabled:opacity-40"
-          >
-            恢复
-          </button>
-        )}
 
         <span style={{ color: 'var(--text-muted)' }}>
-          {post.slug} ｜ 版本 {versionRef.current} ｜ {STATUS_LABEL[post.status]} ｜{' '}
-          {post.visibility === 'PRIVATE' ? '私密' : '公开'}
-          {post.hasUnpublishedChanges ? ' ｜ ● 有未发布的修改' : ''}
+          {STATUS_LABEL[post.status]} ｜ {post.visibility === 'PRIVATE' ? '私密' : '公开'} ｜ 版本{' '}
+          {versionRef.current}
+          {post.hasUnpublishedChanges ? ' ｜ ● 有未发布的修改' : ' ｜ 线上已是最新'}
         </span>
       </div>
     </div>

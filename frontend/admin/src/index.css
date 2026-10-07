@@ -31,7 +31,10 @@ body {
 }
 .preview-body h1,
 .preview-body h2,
-.preview-body h3 {
+.preview-body h3,
+.preview-body h4,
+.preview-body h5,
+.preview-body h6 {
   font-weight: 600;
   margin: 1.2em 0 0.6em;
 }
@@ -43,6 +46,30 @@ body {
 }
 .preview-body h3 {
   font-size: 1.1rem;
+}
+/* h4 及以下也要有字号差，否则看起来和正文一样，像是「标题没渲染出来」 */
+.preview-body h4 {
+  font-size: 1rem;
+}
+.preview-body h5 {
+  font-size: 0.95rem;
+}
+.preview-body h6 {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/*
+ * 任务列表。
+ * commonmark 的 task-list-items 扩展只输出 <li><input type="checkbox" disabled>，
+ * **不会**给 <li> 加 task-list-item 这个 class，所以用 :has() 选中带复选框的项。
+ */
+.preview-body li:has(> input[type='checkbox']) {
+  list-style: none;
+  margin-left: -1.2em;
+}
+.preview-body li > input[type='checkbox'] {
+  margin-right: 0.5em;
 }
 .preview-body p {
   margin: 0.8em 0;

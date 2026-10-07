@@ -5,6 +5,7 @@ import type {
   PostDetail,
   PostSummary,
   PreviewResponse,
+  SlugSuggestResponse,
   UpdatePostBody,
 } from './types'
 
@@ -34,6 +35,14 @@ export const postsApi = {
   publish: (id: number) => api.post<PostDetail>(`/posts/${id}/publish`),
   archive: (id: number) => api.post<PostDetail>(`/posts/${id}/archive`),
   restore: (id: number) => api.post<PostDetail>(`/posts/${id}/restore`),
+
+  /**
+   * 按标题要一个当前没被占用的 slug。
+   *
+   * 用在编辑器里：用户没手动改过 slug 时，它跟着标题走 ——
+   * 否则「新建」时按「未命名文章」生成的 slug 会一直挂着，成为那篇文章的永久 URL。
+   */
+  suggestSlug: (title: string) => api.post<SlugSuggestResponse>('/posts/slug-suggest', { title }),
 }
 
 /** 标签输入框用逗号或空格分隔，这里拆成数组。 */
