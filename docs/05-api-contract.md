@@ -188,8 +188,8 @@ Header: X-Export-Token: <token>
 
 | 方法 | 路径 | 状态 | 说明 |
 |------|------|:--:|------|
-| GET | `/posts` | 🚧 | 文章列表（分页，可按 `tag` `year` `month` 过滤） |
-| GET | `/posts/{slug}` | 🚧 | 文章详情（含上下篇、相关文章） |
+| GET | `/posts` | ✅ | 文章列表（分页）。`tag` / `year` / `month` 过滤还没做 |
+| GET | `/posts/{slug}` | ✅ | 文章详情。上下篇与相关文章还没做 |
 | GET | `/notes` | 🚧 | 短动态流（分页） |
 | GET | `/notes/{id}` | 🚧 | 单条动态 |
 | GET | `/tags` | ❌ | **刻意不做**：静态站构建时用 `/export` 拿标签，多一个公开入口只会多一处要维护、要限流、要保持一致性的地方 |
@@ -207,7 +207,8 @@ Header: X-Export-Token: <token>
 | 分组 | 端点 | 状态 |
 |------|------|:--:|
 | 认证 | `POST /auth/login`、`POST /auth/logout`、`GET /auth/me` | ✅ |
-| 文章 | `GET/POST /posts`、`GET/PATCH/DELETE /posts/{id}`、`POST /posts/{id}/publish`、`/archive`、`/restore`、`/schedule`、`/cancel-schedule`、`/preview`、`POST /posts/slug-suggest` | 🚧 |
+| 文章 | `GET/POST /posts`、`GET/PATCH/DELETE /posts/{id}`、`POST /posts/{id}/publish`、`/archive`、`/restore`、`/preview`、`POST /posts/slug-suggest` | ✅ |
+| 文章·排期 | `POST /posts/{id}/schedule`、`/cancel-schedule` | 🚧 定时发布任务还没写 |
 | 动态 | `GET/POST /notes`、`GET/PATCH/DELETE /notes/{id}`、`POST /notes/{id}/archive`、`/restore` | 🚧 |
 | 媒体 | `POST /assets`（multipart 上传）、`GET /assets`、`DELETE /assets/{id}` | 🚧 |
 | 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | 🚧 |
