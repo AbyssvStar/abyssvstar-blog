@@ -1,4 +1,11 @@
-/** 后端 DTO 的前端映射。字段名与 Kotlin 侧保持一致。 */
+/**
+ * 后端 DTO 的前端映射。字段名与 Kotlin 侧保持一致。
+ *
+ * **可空字段一律写成 `?`（可选），不要写 `| null`。**
+ * 后端 Jackson 配了 `default-property-inclusion: non_null`，值为 null 的字段
+ * 会被整个从 JSON 里省略，运行时拿到的是 `undefined` 而不是 `null`。
+ * 写成 `| null` 会在类型层面骗过编译器，实际用起来才发现取不到值。
+ */
 
 export interface Me {
   userId: number
@@ -14,11 +21,11 @@ export interface PostSummary {
   id: number
   slug: string
   title: string
-  summary: string | null
+  summary?: string
   status: PostStatus
   visibility: Visibility
-  publishedAt: string | null
-  updatedAt: string | null
+  publishedAt?: string
+  updatedAt?: string
   version: number
   tags: string[]
   /** 工作副本与最新发布快照不一致 —— 列表上那个「还没上线」的圆点 */

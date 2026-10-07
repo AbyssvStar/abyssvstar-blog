@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, ApiError, Code, setCsrfToken } from './api/client'
 import type { Me } from './api/types'
 import { LoginPage } from './pages/LoginPage'
+import { PostListPage } from './pages/PostListPage'
 
 export function App() {
   const [me, setMe] = useState<Me | null>(null)
@@ -77,10 +78,8 @@ function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
         </div>
       </header>
 
-      <main className="p-6">
-        <p style={{ color: 'var(--text-muted)' }}>
-          登录链路已经打通（会话 Cookie + CSRF 都正常）。文章列表与编辑器是下一批。
-        </p>
+      <main className="mx-auto max-w-4xl p-6">
+        <PostListPage onUnauthenticated={onLoggedOut} />
       </main>
     </div>
   )
