@@ -1,40 +1,467 @@
 @import 'tailwindcss';
 
-:root {
-  --bg: #0a0a0b;
-  --bg-elevated: #141416;
-  --border: #26262b;
-  --text: #e8e8ea;
-  --text-muted: #9a9aa3;
-  --accent: #6ea8fe;
-  --danger: #f87171;
+/*
+ * 主题令牌。参考 Grafana 的配色：低饱和的画布 + 略亮的面板 + 克制的强调色。
+ * 颜色全部走变量，换主题只换这一处。
+ */
+:root,
+:root[data-theme='dark'] {
+  --canvas: #0b0c0e;
+  --panel: #181b1f;
+  --panel-hover: #1f2226;
+  --elevated: #22252b;
+  --border: #2c3235;
+  --border-weak: #23262b;
+
+  --text: #ccccdc;
+  --text-strong: #ffffff;
+  --text-muted: #8e8e98;
+  --text-faint: #6a6a75;
+
+  --accent: #3d71d9;
+  --accent-hover: #4d7fe0;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgba(61, 113, 217, 0.16);
+
+  --danger: #d10e5c;
+  --danger-soft: rgba(209, 14, 92, 0.14);
+  --warning: #f5b73d;
+  --warning-soft: rgba(245, 183, 61, 0.14);
+  --success: #6ccf8e;
+  --success-soft: rgba(108, 207, 142, 0.14);
+
+  --code-bg: #111217;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme='light'] {
+  --canvas: #f4f5f5;
+  --panel: #ffffff;
+  --panel-hover: #f7f8f9;
+  --elevated: #f4f5f5;
+  --border: #d8d9da;
+  --border-weak: #e6e7e8;
+
+  --text: #3d444d;
+  --text-strong: #111217;
+  --text-muted: #6e7580;
+  --text-faint: #98a0aa;
+
+  --accent: #3d71d9;
+  --accent-hover: #2f61c4;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgba(61, 113, 217, 0.1);
+
+  --danger: #d10e5c;
+  --danger-soft: rgba(209, 14, 92, 0.08);
+  --warning: #b8860b;
+  --warning-soft: rgba(245, 183, 61, 0.16);
+  --success: #1a7f4b;
+  --success-soft: rgba(108, 207, 142, 0.16);
+
+  --code-bg: #f4f5f5;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--canvas);
   color: var(--text);
   font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-/*
- * 预览区的正文排版。
- * 后端渲染出来的是裸标签（h1 / pre / table…），浏览器默认样式在深色背景上很难看，
- * 所以这里给一点基础样式。
- *
- * 代码块的配色是**故意没有的** —— 高亮由公开站构建时的 Shiki 负责，
- * 见 docs/07 §8.1。后台预览里只有结构，没有颜色。
- */
+a {
+  color: var(--accent);
+}
+
+/* ---------- 骨架：左侧导航 + 主区 ---------- */
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border-weak);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 208px;
+}
+
+.sidebar__brand {
+  align-items: center;
+  border-bottom: 1px solid var(--border-weak);
+  color: var(--text-strong);
+  display: flex;
+  font-size: 15px;
+  font-weight: 600;
+  gap: 10px;
+  height: 48px;
+  padding: 0 16px;
+}
+
+.sidebar__mark {
+  background: linear-gradient(135deg, var(--accent), #7b4dd9);
+  border-radius: 6px;
+  height: 20px;
+  width: 20px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px;
+}
+
+.nav__item {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 14px;
+  gap: 10px;
+  padding: 7px 10px;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+  width: 100%;
+}
+
+.nav__item:hover {
+  background: var(--panel-hover);
+  color: var(--text);
+}
+
+.nav__item--active {
+  background: var(--accent-soft);
+  color: var(--text-strong);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  align-items: center;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border-weak);
+  display: flex;
+  flex-shrink: 0;
+  gap: 12px;
+  height: 48px;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.topbar__title {
+  color: var(--text-strong);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.topbar__right {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.content {
+  flex: 1;
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 20px 16px 48px;
+  width: 100%;
+}
+
+/* ---------- 面板 ---------- */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border-weak);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+
+.panel__header {
+  align-items: center;
+  border-bottom: 1px solid var(--border-weak);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+
+.panel__title {
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.panel__body {
+  padding: 14px;
+}
+
+/* ---------- 按钮 ---------- */
+
+.btn {
+  align-items: center;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 13px;
+  gap: 6px;
+  padding: 5px 10px;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--panel-hover);
+  border-color: var(--text-faint);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 500;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--panel-hover);
+  color: var(--text);
+}
+
+.btn--danger {
+  color: var(--danger);
+}
+
+/* ---------- 徽章 ---------- */
+
+.badge {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.6;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.badge--draft {
+  background: var(--elevated);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.badge--published {
+  background: var(--success-soft);
+  border-color: transparent;
+  color: var(--success);
+}
+.badge--scheduled {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.badge--archived {
+  background: var(--elevated);
+  border-color: var(--border);
+  color: var(--text-faint);
+}
+.badge--private {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.badge--public {
+  background: transparent;
+  color: var(--text-faint);
+}
+
+/* ---------- 表单 ---------- */
+
+.field {
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  padding: 7px 10px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  width: 100%;
+}
+
+.field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.field::placeholder {
+  color: var(--text-faint);
+}
+
+.field--mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.field-label {
+  color: var(--text-muted);
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+/* ---------- 数据表格 ---------- */
+
+.data-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.data-table th {
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table td {
+  border-bottom: 1px solid var(--border-weak);
+  padding: 10px;
+  vertical-align: top;
+}
+
+.data-table tbody tr {
+  transition: background 0.1s;
+}
+
+.data-table tbody tr:hover {
+  background: var(--panel-hover);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.link-cell {
+  background: none;
+  border: none;
+  color: var(--text-strong);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 0;
+  text-align: left;
+}
+
+.link-cell:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.faint {
+  color: var(--text-faint);
+}
+
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+/* ---------- 提示条 ---------- */
+
+.banner {
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+}
+
+.banner--danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ---------- 主题切换 ---------- */
+
+.theme-toggle {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  gap: 6px;
+  padding: 4px 8px;
+}
+
+.theme-toggle:hover {
+  background: var(--panel-hover);
+  color: var(--text);
+}
+
+/* ---------- 预览区正文 ---------- */
+
 .preview-body {
   line-height: 1.75;
   word-break: break-word;
 }
+
 .preview-body h1,
 .preview-body h2,
 .preview-body h3,
 .preview-body h4,
 .preview-body h5,
 .preview-body h6 {
+  color: var(--text-strong);
   font-weight: 600;
   margin: 1.2em 0 0.6em;
 }
@@ -47,7 +474,6 @@ body {
 .preview-body h3 {
   font-size: 1.1rem;
 }
-/* h4 及以下也要有字号差，否则看起来和正文一样，像是「标题没渲染出来」 */
 .preview-body h4 {
   font-size: 1rem;
 }
@@ -55,21 +481,8 @@ body {
   font-size: 0.95rem;
 }
 .preview-body h6 {
-  font-size: 0.9rem;
   color: var(--text-muted);
-}
-
-/*
- * 任务列表。
- * commonmark 的 task-list-items 扩展只输出 <li><input type="checkbox" disabled>，
- * **不会**给 <li> 加 task-list-item 这个 class，所以用 :has() 选中带复选框的项。
- */
-.preview-body li:has(> input[type='checkbox']) {
-  list-style: none;
-  margin-left: -1.2em;
-}
-.preview-body li > input[type='checkbox'] {
-  margin-right: 0.5em;
+  font-size: 0.9rem;
 }
 .preview-body p {
   margin: 0.8em 0;
@@ -86,21 +499,24 @@ body {
   list-style: decimal;
 }
 .preview-body code {
-  background: var(--bg-elevated);
+  background: var(--code-bg);
+  border: 1px solid var(--border-weak);
   border-radius: 3px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.88em;
   padding: 0.1em 0.35em;
-  font-size: 0.9em;
 }
 .preview-body pre {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: var(--code-bg);
+  border: 1px solid var(--border-weak);
+  border-radius: 4px;
   margin: 1em 0;
   overflow-x: auto;
-  padding: 0.8em 1em;
+  padding: 0.9em 1em;
 }
 .preview-body pre code {
   background: none;
+  border: none;
   padding: 0;
 }
 .preview-body blockquote {
@@ -118,7 +534,26 @@ body {
   border: 1px solid var(--border);
   padding: 0.4em 0.8em;
 }
+.preview-body th {
+  background: var(--elevated);
+}
 .preview-body a {
   color: var(--accent);
-  text-decoration: underline;
+}
+.preview-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
+}
+
+/*
+ * 任务列表。commonmark 的 task-list-items 扩展只输出
+ * <li><input type="checkbox" disabled>，不给 <li> 加 class，所以用 :has() 选。
+ */
+.preview-body li:has(> input[type='checkbox']) {
+  list-style: none;
+  margin-left: -1.2em;
+}
+.preview-body li > input[type='checkbox'] {
+  margin-right: 0.5em;
 }

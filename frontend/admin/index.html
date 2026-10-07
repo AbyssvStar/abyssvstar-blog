@@ -1,11 +1,28 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- 后台不该被搜索引擎收录 -->
     <meta name="robots" content="noindex, nofollow" />
-    <title>后台 · AbyssvStar</title>
+    <title>AbyssvStar 后台</title>
+    <script>
+      /*
+       * 必须放在 <head> 里、在任何样式生效之前执行。
+       * 不做这一步的话，浅色模式下每次刷新都会先闪一下深色 —— 也就是 FOUC。
+       */
+      ;(function () {
+        try {
+          var t = localStorage.getItem('admin-theme')
+          if (t !== 'light' && t !== 'dark') {
+            t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+          }
+          document.documentElement.setAttribute('data-theme', t)
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark')
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

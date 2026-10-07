@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react'
 import { ApiError, Code } from '../api/client'
 import { postsApi } from '../api/posts'
-import type { PageData, PostSummary } from '../api/types'
+import type { PageData, PostStatus, PostSummary, Visibility } from '../api/types'
 
-const STATUS_LABEL: Record<PostSummary['status'], string> = {
+const STATUS_LABEL: Record<PostStatus, string> = {
   DRAFT: '草稿',
   SCHEDULED: '已排期',
   PUBLISHED: '已发布',
   ARCHIVED: '已归档',
+}
+
+const STATUS_CLASS: Record<PostStatus, string> = {
+  DRAFT: 'badge--draft',
+  SCHEDULED: 'badge--scheduled',
+  PUBLISHED: 'badge--published',
+  ARCHIVED: 'badge--archived',
 }
 
 const PAGE_SIZE = 20
@@ -66,97 +73,93 @@ export function PostListPage({
     }
   }
 
-  if (loading && !data) return <Hint>加载中…</Hint>
-  if (error) return <Hint danger>{error}</Hint>
+  if (error) return <div className="banner banner--danger">{error}</div>
+  if (loading && !data) return <p className="muted">加载中…</p>
   if (!data) return null
+
+  const newButton = (
+    <button className="btn btn--primary" onClick={() => void create()} disabled={creating}>
+      {creating ? '新建中…' : '新建文章'}
+    </button>
+  )
 
   if (data.total === 0) {
     return (
-      <div>
-        <Hint>还没有文章。</Hint>
-        <button
-          onClick={() => void create()}
-          disabled={creating}
-          className="mt-3 rounded px-3 py-1.5 text-sm disabled:opacity-40"
-          style={{ background: 'var(--accent)', color: '#0a0a0b' }}
-        >
-          {creating ? '新建中…' : '新建文章'}
-        </button>
+      <div className="panel">
+        <div className="panel__header">
+          <span className="panel__title">文章</span>
+          {newButton}
+        </div>
+        <div className="panel__body">
+          <p className="muted" style={{ margin: 0 }}>
+            还没有文章。点右上角「新建文章」开始写第一篇。
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div>
-      <div className="mb-4 flex items-baseline justify-between">
-        <h1 className="text-lg font-medium">
-          文章 <span style={{ color: 'var(--text-muted)' }}>{data.total}</span>
-        </h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+    <div className="panel">
+      <div className="panel__header">
+        <span className="panel__title">
+          文章 <span className="faint">{data.total}</span>
+        </span>
+        <div style={{ alignItems: 'center', display: 'flex', gap: 12 }}>
+          <span className="muted" style={{ fontSize: 12 }}>
             第 {data.page} / {Math.max(1, data.totalPages)} 页
           </span>
-          <button
-            onClick={() => void create()}
-            disabled={creating}
-            className="rounded px-3 py-1 text-sm disabled:opacity-40"
-            style={{ background: 'var(--accent)', color: '#0a0a0b' }}
-          >
-            {creating ? '新建中…' : '新建'}
-          </button>
+          {newButton}
         </div>
       </div>
 
-      <table className="w-full border-collapse text-sm">
+      <table className="data-table">
         <thead>
-          <tr style={{ color: 'var(--text-muted)' }} className="text-left">
-            <th className="border-b py-2 font-normal" style={borderStyle}>
-              标题
-            </th>
-            <th className="border-b py-2 font-normal" style={borderStyle}>
-              状态
-            </th>
-            <th className="border-b py-2 font-normal" style={borderStyle}>
-              可见性
-            </th>
-            <th className="border-b py-2 font-normal" style={borderStyle}>
-              标签
-            </th>
-            <th className="border-b py-2 font-normal" style={borderStyle}>
-              最后修改
-            </th>
+          <tr>
+            <th>标题</th>
+            <th style={{ width: 90 }}>状态</th>
+            <th style={{ width: 80 }}>可见性</th>
+            <th style={{ width: 160 }}>标签</th>
+            <th style={{ width: 150 }}>最后修改</th>
           </tr>
         </thead>
         <tbody>
           {data.items.map((post) => (
             <tr key={post.id}>
-              <td className="border-b py-2" style={borderStyle}>
-                {/* 「有未发布的修改」那个圆点，见 docs/04 §4.1 */}
-                {post.hasUnpublishedChanges && (
-                  <span title="有未发布的修改" className="mr-2" style={{ color: 'var(--accent)' }}>
-                    ●
-                  </span>
-                )}
-                <button
-                  onClick={() => onOpen(post.id)}
-                  className="text-left hover:underline"
-                >
-                  {post.title}
-                </button>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              <td>
+                <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                  {/* 「有未发布的修改」那个圆点，见 docs/04 §4.1 */}
+                  {post.hasUnpublishedChanges && (
+                    <span
+                      title="有未发布的修改"
+                      style={{
+                        background: 'var(--accent)',
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                        height: 7,
+                        width: 7,
+                      }}
+                    />
+                  )}
+                  <button className="link-cell" onClick={() => onOpen(post.id)}>
+                    {post.title}
+                  </button>
+                  {post.visibility === 'PRIVATE' && <VisibilityBadge visibility={post.visibility} />}
+                </div>
+                <div className="mono faint" style={{ marginTop: 3 }}>
                   {post.slug}
                 </div>
               </td>
-              <td className="border-b py-2" style={borderStyle}>
-                {STATUS_LABEL[post.status]}
+              <td>
+                <span className={`badge ${STATUS_CLASS[post.status]}`}>{STATUS_LABEL[post.status]}</span>
               </td>
-              <td className="border-b py-2" style={borderStyle}>
+              <td>
                 <VisibilityBadge visibility={post.visibility} />
               </td>
-              <td className="border-b py-2" style={borderStyle}>
+              <td className="muted" style={{ fontSize: 13 }}>
                 {post.tags.length > 0 ? post.tags.join(' / ') : '—'}
               </td>
-              <td className="border-b py-2" style={borderStyle}>
+              <td className="muted" style={{ fontSize: 13 }}>
                 {formatTime(post.updatedAt)}
               </td>
             </tr>
@@ -165,18 +168,22 @@ export function PostListPage({
       </table>
 
       {data.totalPages > 1 && (
-        <div className="mt-4 flex gap-4 text-sm">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="underline disabled:opacity-30 disabled:no-underline"
-          >
+        <div
+          style={{
+            borderTop: '1px solid var(--border-weak)',
+            display: 'flex',
+            gap: 8,
+            justifyContent: 'flex-end',
+            padding: '10px 14px',
+          }}
+        >
+          <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
             上一页
           </button>
           <button
+            className="btn"
             onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
             disabled={page >= data.totalPages}
-            className="underline disabled:opacity-30 disabled:no-underline"
           >
             下一页
           </button>
@@ -187,34 +194,18 @@ export function PostListPage({
 }
 
 /**
- * 私密文章必须一眼看得出来。
+ * 私密内容必须一眼看得出来。
  *
- * 这是 docs/04 §3.3 四条硬规则里的第 4 条：防的是「自己看错」——
- * 把私密内容当公开的，或者反过来。所以不能只靠一个不起眼的字段。
+ * 这是 docs/04 §3.3 四条硬规则里的第 4 条：前三条防泄漏（永不写快照、
+ * 永不进公开 API、永不进公开索引），**这一条防的是「自己看错」**。
+ * 所以用醒目的红色徽章，而不是一个不起眼的字段。
  */
-function VisibilityBadge({ visibility }: { visibility: PostSummary['visibility'] }) {
+function VisibilityBadge({ visibility }: { visibility: Visibility }) {
   if (visibility === 'PRIVATE') {
-    return (
-      <span
-        className="rounded px-2 py-0.5 text-xs"
-        style={{ background: 'rgba(248,113,113,.15)', color: 'var(--danger)' }}
-      >
-        私密
-      </span>
-    )
+    return <span className="badge badge--private">私密</span>
   }
-  return (
-    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-      公开
-    </span>
-  )
+  return <span className="badge badge--public">公开</span>
 }
-
-function Hint({ children, danger }: { children: React.ReactNode; danger?: boolean }) {
-  return <p style={{ color: danger ? 'var(--danger)' : 'var(--text-muted)' }}>{children}</p>
-}
-
-const borderStyle: React.CSSProperties = { borderColor: 'var(--border)' }
 
 function formatTime(iso: string | null | undefined): string {
   if (!iso) return '—'

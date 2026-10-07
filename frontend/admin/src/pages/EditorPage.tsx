@@ -314,8 +314,8 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
 
   // ---------- 渲染 ----------
 
-  if (loadError) return <p style={{ color: 'var(--danger)' }}>{loadError}</p>
-  if (!post) return <p style={{ color: 'var(--text-muted)' }}>加载中…</p>
+  if (loadError) return <div className="banner banner--danger">{loadError}</div>
+  if (!post) return <p className="muted">加载中…</p>
 
   const tags = parseTags(tagsText)
   const archived = post.status === 'ARCHIVED'
@@ -324,7 +324,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <button onClick={() => void goBack()} className="text-sm underline" style={{ color: 'var(--text-muted)' }}>
+        <button onClick={() => void goBack()} className="btn btn--ghost">
           ← 返回列表
         </button>
         <SaveIndicator state={save} />
@@ -355,8 +355,8 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
         value={title}
         onChange={(e) => applyDraft({ title: e.target.value }, { followSlug: true })}
         placeholder="标题"
-        className="mb-3 w-full rounded border px-3 py-2 text-lg outline-none"
-        style={fieldStyle}
+        className="field"
+        style={{ fontSize: 17, fontWeight: 500, marginBottom: 10 }}
       />
 
       <div className="mb-1 flex items-center gap-2">
@@ -371,8 +371,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
             applyDraft({ slug: e.target.value })
           }}
           placeholder="按标题自动生成"
-          className="w-full rounded border px-3 py-1.5 font-mono text-xs outline-none"
-          style={fieldStyle}
+          className="field field--mono"
         />
       </div>
       <p className="mb-3 text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -385,16 +384,16 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
         value={summary}
         onChange={(e) => applyDraft({ summary: e.target.value })}
         placeholder="摘要（公开文章发布时必填，SEO 用）"
-        className="mb-3 w-full rounded border px-3 py-2 text-sm outline-none"
-        style={fieldStyle}
+        className="field"
+        style={{ marginBottom: 10 }}
       />
 
       <input
         value={tagsText}
         onChange={(e) => applyDraft({ tagsText: e.target.value })}
         placeholder="标签，逗号分隔，最多 5 个"
-        className="mb-3 w-full rounded border px-3 py-2 text-sm outline-none"
-        style={fieldStyle}
+        className="field"
+        style={{ marginBottom: 14 }}
       />
       {tags.length > MAX_TAGS && (
         <p className="mb-3 text-xs" style={{ color: 'var(--danger)' }}>
@@ -408,15 +407,12 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
           onChange={(e) => applyDraft({ contentMd: e.target.value }, { preview: true })}
           placeholder="用 Markdown 写正文…"
           spellCheck={false}
-          className="rounded border px-3 py-2 font-mono text-sm outline-none"
-          style={{ ...fieldStyle, minHeight: '30rem', lineHeight: 1.7 }}
+          className="field field--mono"
+          style={{ lineHeight: 1.7, minHeight: '30rem' }}
         />
 
-        <div
-          className="overflow-auto rounded border px-4 py-2"
-          style={{ ...fieldStyle, minHeight: '30rem', maxHeight: '46rem' }}
-        >
-          <div className="mb-2 flex justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
+        <div className="panel" style={{ maxHeight: '46rem', minHeight: '30rem', overflow: 'auto', padding: '8px 14px' }}>
+          <div className="faint" style={{ display: 'flex', fontSize: 12, justifyContent: 'space-between', marginBottom: 8 }}>
             <span>预览（{PREVIEW_DELAY_MS / 1000} 秒防抖，无需保存）</span>
             {preview && (
               <span>
@@ -440,8 +436,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
         <button
           onClick={() => void doSave()}
           disabled={save.kind === 'saving' || save.kind === 'conflict'}
-          className="rounded border px-3 py-1.5 disabled:opacity-40"
-          style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+          className="btn"
         >
           保存草稿
         </button>
@@ -454,8 +449,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
           <button
             onClick={() => void restore()}
             disabled={publishing}
-            className="rounded px-3 py-1.5 font-medium disabled:opacity-40"
-            style={{ background: 'var(--accent)', color: '#0a0a0b' }}
+            className="btn btn--primary"
           >
             {publishing ? '恢复中…' : '恢复（重新发布）'}
           </button>
@@ -464,20 +458,19 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
             onClick={() => void publish()}
             disabled={publishing || save.kind === 'conflict' || publishedNoChange}
             title={publishedNoChange ? '线上已是最新，没有需要发布的改动' : undefined}
-            className="rounded px-3 py-1.5 font-medium disabled:opacity-40"
-            style={{ background: 'var(--accent)', color: '#0a0a0b' }}
+            className="btn btn--primary"
           >
             {publishing ? '处理中…' : post.status === 'PUBLISHED' ? '更新线上' : '发布'}
           </button>
         )}
 
         {post.status === 'PUBLISHED' && (
-          <button onClick={() => void archive()} disabled={publishing} className="underline disabled:opacity-40">
+          <button className="btn btn--ghost" onClick={() => void archive()} disabled={publishing}>
             归档
           </button>
         )}
 
-        <span style={{ color: 'var(--text-muted)' }}>
+        <span className="muted">
           {STATUS_LABEL[post.status]} ｜ {post.visibility === 'PRIVATE' ? '私密' : '公开'} ｜ 版本{' '}
           {versionRef.current}
           {post.hasUnpublishedChanges ? ' ｜ ● 有未发布的修改' : ' ｜ 线上已是最新'}
@@ -497,37 +490,24 @@ const STATUS_LABEL: Record<PostDetail['status'], string> = {
 function SaveIndicator({ state }: { state: SaveState }) {
   switch (state.kind) {
     case 'clean':
-      return <span className="text-sm" style={{ color: 'var(--text-muted)' }}>未改动</span>
+      return <span className="muted">未改动</span>
     case 'dirty':
-      return <span className="text-sm" style={{ color: 'var(--text-muted)' }}>有改动，等待自动保存…</span>
+      return <span className="muted">有改动，等待自动保存…</span>
     case 'saving':
-      return <span className="text-sm" style={{ color: 'var(--text-muted)' }}>保存中…</span>
+      return <span className="muted">保存中…</span>
     case 'saved':
       return (
-        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+        <span className="muted">
           已保存 {state.at.toLocaleTimeString('zh-CN', { hour12: false })}
         </span>
       )
     case 'failed':
-      return <span className="text-sm font-medium" style={{ color: 'var(--danger)' }}>● 未保存</span>
+      return <span style={{ color: 'var(--danger)', fontWeight: 500 }}>● 未保存</span>
     case 'conflict':
-      return <span className="text-sm font-medium" style={{ color: 'var(--danger)' }}>● 版本冲突</span>
+      return <span style={{ color: 'var(--danger)', fontWeight: 500 }}>● 版本冲突</span>
   }
 }
 
 function Banner({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="mb-4 rounded border px-4 py-3 text-sm"
-      style={{ borderColor: 'var(--danger)', background: 'rgba(248,113,113,.1)', color: 'var(--danger)' }}
-    >
-      {children}
-    </div>
-  )
-}
-
-const fieldStyle: React.CSSProperties = {
-  background: 'var(--bg-elevated)',
-  borderColor: 'var(--border)',
-  color: 'var(--text)',
+  return <div className="banner banner--danger">{children}</div>
 }
