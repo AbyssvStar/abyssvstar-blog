@@ -16,3 +16,82 @@ body {
   color: var(--text);
   font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
+
+/*
+ * 预览区的正文排版。
+ * 后端渲染出来的是裸标签（h1 / pre / table…），浏览器默认样式在深色背景上很难看，
+ * 所以这里给一点基础样式。
+ *
+ * 代码块的配色是**故意没有的** —— 高亮由公开站构建时的 Shiki 负责，
+ * 见 docs/07 §8.1。后台预览里只有结构，没有颜色。
+ */
+.preview-body {
+  line-height: 1.75;
+  word-break: break-word;
+}
+.preview-body h1,
+.preview-body h2,
+.preview-body h3 {
+  font-weight: 600;
+  margin: 1.2em 0 0.6em;
+}
+.preview-body h1 {
+  font-size: 1.5rem;
+}
+.preview-body h2 {
+  font-size: 1.25rem;
+}
+.preview-body h3 {
+  font-size: 1.1rem;
+}
+.preview-body p {
+  margin: 0.8em 0;
+}
+.preview-body ul,
+.preview-body ol {
+  margin: 0.8em 0;
+  padding-left: 1.5em;
+}
+.preview-body ul {
+  list-style: disc;
+}
+.preview-body ol {
+  list-style: decimal;
+}
+.preview-body code {
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+}
+.preview-body pre {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 1em 0;
+  overflow-x: auto;
+  padding: 0.8em 1em;
+}
+.preview-body pre code {
+  background: none;
+  padding: 0;
+}
+.preview-body blockquote {
+  border-left: 3px solid var(--border);
+  color: var(--text-muted);
+  margin: 1em 0;
+  padding-left: 1em;
+}
+.preview-body table {
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+.preview-body th,
+.preview-body td {
+  border: 1px solid var(--border);
+  padding: 0.4em 0.8em;
+}
+.preview-body a {
+  color: var(--accent);
+  text-decoration: underline;
+}

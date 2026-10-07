@@ -80,3 +80,10 @@ export interface CreatePostBody {
   tags?: string[]
   visibility?: Visibility
 }
+
+/** 实时预览的结果。渲染器与发布时是同一个，所以这就是上线后的样子。 */
+export interface PreviewResponse {
+  html: string
+  wordCount: number
+  readingMinutes: number
+}

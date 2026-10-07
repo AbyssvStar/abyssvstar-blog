@@ -4,6 +4,7 @@ import type {
   PageData,
   PostDetail,
   PostSummary,
+  PreviewResponse,
   UpdatePostBody,
 } from './types'
 
@@ -22,6 +23,17 @@ export const postsApi = {
    * 对不上就返回 409，说明这份内容在别处已经被改过了。
    */
   update: (id: number, body: UpdatePostBody) => api.patch<PostDetail>(`/posts/${id}`, body),
+
+  /**
+   * 实时预览。**没有任何副作用**：不写库、不碰发布快照、不触发构建。
+   * 正文从请求里带上去，所以看到的是编辑器里**还没保存**的内容 —— 这正是它的意义。
+   */
+  preview: (id: number, contentMd: string) =>
+    api.post<PreviewResponse>(`/posts/${id}/preview`, { contentMd }),
+
+  publish: (id: number) => api.post<PostDetail>(`/posts/${id}/publish`),
+  archive: (id: number) => api.post<PostDetail>(`/posts/${id}/archive`),
+  restore: (id: number) => api.post<PostDetail>(`/posts/${id}/restore`),
 }
 
 /** 标签输入框用逗号或空格分隔，这里拆成数组。 */
