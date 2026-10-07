@@ -87,3 +87,8 @@ export interface PreviewResponse {
   wordCount: number
   readingMinutes: number
 }
+
+/** POST /posts/slug-suggest 的返回 */
+export interface SlugSuggestResponse {
+  slug: string
+}

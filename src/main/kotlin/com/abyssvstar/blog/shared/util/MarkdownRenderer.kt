@@ -4,6 +4,7 @@ import org.commonmark.Extension
 import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TablesExtension
+import org.commonmark.ext.task.list.items.TaskListItemsExtension
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
 import org.springframework.stereotype.Component
@@ -26,6 +27,7 @@ class MarkdownRenderer {
         TablesExtension.create(),
         StrikethroughExtension.create(),
         AutolinkExtension.create(),
+        TaskListItemsExtension.create(),
     )
 
     private val parser: Parser = Parser.builder().extensions(extensions).build()
