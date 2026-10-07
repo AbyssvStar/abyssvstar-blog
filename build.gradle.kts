@@ -42,6 +42,10 @@ dependencies {
 
     // Markdown 渲染。预览和发布必须走同一个实例，否则「所见即所得」是假的
     implementation("org.commonmark:commonmark:0.24.0")
+    // GFM 扩展。没有表格的话，技术文章里的表格会原样显示成一堆竖线
+    implementation("org.commonmark:commonmark-ext-gfm-tables:0.24.0")
+    implementation("org.commonmark:commonmark-ext-gfm-strikethrough:0.24.0")
+    implementation("org.commonmark:commonmark-ext-autolink:0.24.0")
 
     // 中文标题转拼音，用来生成 slug。单个 jar，无传递依赖
     implementation("com.belerweb:pinyin4j:2.5.1")
