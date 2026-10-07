@@ -3,6 +3,7 @@ import { api, ApiError, Code, setCsrfToken } from './api/client'
 import type { Me } from './api/types'
 import { LoginPage } from './pages/LoginPage'
 import { PostListPage } from './pages/PostListPage'
+import { EditorPage } from './pages/EditorPage'
 
 export function App() {
   const [me, setMe] = useState<Me | null>(null)
@@ -49,6 +50,8 @@ export function App() {
 
 function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
   const [busy, setBusy] = useState(false)
+  // 只有两个页面，用状态做路由就够了。页面多起来再引 react-router
+  const [editingId, setEditingId] = useState<number | null>(null)
 
   async function logout() {
     setBusy(true)
@@ -79,7 +82,11 @@ function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
       </header>
 
       <main className="mx-auto max-w-4xl p-6">
-        <PostListPage onUnauthenticated={onLoggedOut} />
+        {editingId === null ? (
+          <PostListPage onUnauthenticated={onLoggedOut} onOpen={setEditingId} />
+        ) : (
+          <EditorPage postId={editingId} onBack={() => setEditingId(null)} />
+        )}
       </main>
     </div>
   )

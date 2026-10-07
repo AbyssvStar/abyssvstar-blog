@@ -39,3 +39,44 @@ export interface PageData<T> {
   total: number
   totalPages: number
 }
+
+/** 后台的文章详情，含正文。 */
+export interface PostDetail {
+  id: number
+  slug: string
+  title: string
+  summary?: string
+  contentMd: string
+  coverAssetId?: number
+  status: PostStatus
+  visibility: Visibility
+  publishAt?: string
+  publishedAt?: string
+  lastPublishedAt?: string
+  viewCount: number
+  /** 乐观锁版本号。每次 PATCH 都要把它带回去 */
+  version: number
+  createdAt?: string
+  updatedAt?: string
+  tags: string[]
+  hasUnpublishedChanges: boolean
+}
+
+/** PATCH /posts/{id} 的请求体。只传要改的字段，`version` 必填。 */
+export interface UpdatePostBody {
+  title?: string
+  summary?: string
+  contentMd?: string
+  slug?: string
+  visibility?: Visibility
+  tags?: string[]
+  version: number
+}
+
+export interface CreatePostBody {
+  title: string
+  summary?: string
+  contentMd?: string
+  tags?: string[]
+  visibility?: Visibility
+}
