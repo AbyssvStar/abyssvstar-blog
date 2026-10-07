@@ -1,9 +1,12 @@
 package com.abyssvstar.blog.post.web
 
 import com.abyssvstar.blog.post.service.PostService
+import com.abyssvstar.blog.post.service.PublishService
 import com.abyssvstar.blog.post.web.dto.CreatePostRequest
 import com.abyssvstar.blog.post.web.dto.PostResponse
 import com.abyssvstar.blog.post.web.dto.PostSummaryResponse
+import com.abyssvstar.blog.post.web.dto.PreviewRequest
+import com.abyssvstar.blog.post.web.dto.PreviewResponse
 import com.abyssvstar.blog.post.web.dto.SlugSuggestRequest
 import com.abyssvstar.blog.post.web.dto.SlugSuggestResponse
 import com.abyssvstar.blog.post.web.dto.UpdatePostRequest
@@ -27,7 +30,10 @@ import org.springframework.web.bind.annotation.RestController
  */
 @RestController
 @RequestMapping("/admin/api/posts")
-class AdminPostController(private val postService: PostService) {
+class AdminPostController(
+    private val postService: PostService,
+    private val publishService: PublishService,
+) {
 
     @GetMapping
     fun list(
@@ -59,6 +65,26 @@ class AdminPostController(private val postService: PostService) {
     @PostMapping("/slug-suggest")
     fun suggestSlug(@Valid @RequestBody body: SlugSuggestRequest): ApiResponse<SlugSuggestResponse> =
         ApiResponse.ok(SlugSuggestResponse(postService.suggestSlug(body.title)))
+
+    /** 发布：把工作副本定格成快照。整条流程一个事务。 */
+    @PostMapping("/{id}/publish")
+    fun publish(@PathVariable id: Long): ApiResponse<PostResponse> =
+        ApiResponse.ok(publishService.publish(id))
+
+    @PostMapping("/{id}/archive")
+    fun archive(@PathVariable id: Long): ApiResponse<PostResponse> =
+        ApiResponse.ok(publishService.archive(id))
+
+    @PostMapping("/{id}/restore")
+    fun restore(@PathVariable id: Long): ApiResponse<PostResponse> =
+        ApiResponse.ok(publishService.restore(id))
+
+    /** 实时预览。没有副作用：不写库、不碰快照、不触发构建。 */
+    @PostMapping("/{id}/preview")
+    fun preview(
+        @PathVariable id: Long,
+        @Valid @RequestBody body: PreviewRequest,
+    ): ApiResponse<PreviewResponse> = ApiResponse.ok(publishService.preview(body.contentMd))
 
     private companion object {
         /** 后台接口的分页上限，见 docs/05 §4 */

@@ -11,11 +11,12 @@ import com.abyssvstar.blog.post.web.dto.PostSummaryResponse
 import com.abyssvstar.blog.post.web.dto.PublicPostResponse
 import com.abyssvstar.blog.post.web.dto.PublicPostSummaryResponse
 import com.abyssvstar.blog.post.web.dto.UpdatePostRequest
-import com.abyssvstar.blog.shared.util.Hashing
+import com.abyssvstar.blog.shared.domain.Visibility
 import com.abyssvstar.blog.shared.util.Slugify
 import com.abyssvstar.blog.shared.web.BusinessException
 import com.abyssvstar.blog.shared.web.ErrorCode
 import com.abyssvstar.blog.shared.web.PageData
+import com.abyssvstar.blog.sitebuild.service.SiteBuildService
 import com.abyssvstar.blog.taxonomy.service.TagService
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
@@ -33,6 +34,7 @@ class PostService(
     private val publications: PostPublicationRepository,
     private val tags: TagService,
     private val objectMapper: ObjectMapper,
+    private val siteBuilds: SiteBuildService,
 ) {
 
     // ---------- 后台 ----------
@@ -94,6 +96,11 @@ class PostService(
 
         if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
         req.tags?.let { tags.replaceTags(id, it) }
+
+        // 改成私密等于撤回。旧的发布快照留着会被导出接口带走，私人内容就上线了
+        if (post.visibility == Visibility.PRIVATE && publications.deleteByPostId(id)) {
+            siteBuilds.requestBuild("post.became-private:$id")
+        }
 
         return getForAdmin(id)
     }
@@ -162,18 +169,7 @@ class PostService(
 
     /** 工作副本与发布快照是否不一致。从没发布过也算「还没上线」。 */
     private fun isStale(post: Post, tagNames: List<String>, publication: PostPublication?): Boolean =
-        publication == null || publication.sourceHash != sourceHash(post, tagNames)
-
-    private fun sourceHash(post: Post, tagNames: List<String>): String = Hashing.sha256Hex(
-        listOf(
-            post.title,
-            post.summary.orEmpty(),
-            post.contentMd,
-            post.slug,
-            tagNames.sorted().joinToString(","),
-            post.coverAssetId?.toString().orEmpty(),
-        ).joinToString(FIELD_SEPARATOR),
-    )
+        publication == null || publication.sourceHash != PostSourceHash.of(post, tagNames)
 
     private fun parseTags(json: String): List<String> =
         runCatching { objectMapper.readValue(json, Array<String>::class.java).toList() }
@@ -237,8 +233,5 @@ class PostService(
 
     private companion object {
         const val MAX_SLUG_ATTEMPTS = 50
-
-        /** 拼接各字段算哈希时用的分隔符。用不可见字符，避免字段内容把它拼出来 */
-        const val FIELD_SEPARATOR = "\u0000"
     }
 }
