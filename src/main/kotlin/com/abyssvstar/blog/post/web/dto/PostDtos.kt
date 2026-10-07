@@ -127,3 +127,15 @@ data class PublicPostSummaryResponse(
     val readingMinutes: Int,
     val publishedAt: Instant?,
 )
+
+/** 实时预览的请求。编辑器里有未保存的内容，所以正文要一起传上来。 */
+data class PreviewRequest(
+    val contentMd: String = "",
+)
+
+/** 预览结果。渲染器和发布时用的是同一个实例，所以这里看到的就是上线后的样子。 */
+data class PreviewResponse(
+    val html: String,
+    val wordCount: Int,
+    val readingMinutes: Int,
+)

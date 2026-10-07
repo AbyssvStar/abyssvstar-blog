@@ -10,6 +10,16 @@ class PostPublicationRepository(private val mapper: PostPublicationMapper) {
 
     fun findByPostId(postId: Long): PostPublication? = mapper.selectById(postId)
 
+    /**
+     * 这个 slug 是否已经被**别的**文章的快照占了。
+     *
+     * 发布前先查一次，好给出 30002 这个业务错误，而不是让数据库的唯一索引抛异常。
+     */
+    fun isSlugTakenByOther(slug: String, postId: Long): Boolean =
+        mapper.selectCount(
+            QueryWrapper<PostPublication>().eq("slug", slug).ne("post_id", postId),
+        ) > 0
+
     /** 批量取，供后台列表算「有没有未发布的修改」。 */
     fun findByPostIds(postIds: Collection<Long>): Map<Long, PostPublication> {
         if (postIds.isEmpty()) return emptyMap()
