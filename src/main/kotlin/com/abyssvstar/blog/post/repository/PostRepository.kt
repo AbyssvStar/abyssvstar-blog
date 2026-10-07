@@ -1,6 +1,8 @@
 package com.abyssvstar.blog.post.repository
 
 import com.abyssvstar.blog.post.domain.Post
+import com.abyssvstar.blog.post.domain.PostStatus
+import com.abyssvstar.blog.shared.domain.Visibility
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page
@@ -38,6 +40,27 @@ class PostRepository(private val mapper: PostMapper) {
     /** 全部公开可见的文章，顺序固定。导出接口用它 —— 顺序不稳，ETag 就不稳，304 会失效。 */
     fun findAllPublic(): List<Post> =
         mapper.selectList(PublishedContentSpec.wrapper().orderByDesc("published_at", "id"))
+
+    /**
+     * 到点该发的排期文章，逐条加行锁。
+     *
+     * 用 `publish_at <= now()` 而不是「刚好等于」：服务器停机跨过了发布时间也不会漏发。
+     * `FOR UPDATE SKIP LOCKED` 让重复执行或并发执行不会互相阻塞。
+     *
+     * 这里的 `visibility = PUBLIC` 和 PublishedContentSpec 不是同一件事 ——
+     * 那个判「能不能被访客看到」，这个判「该不该现在发出去」。
+     */
+    fun lockDueForPublish(): List<Post> =
+        mapper.selectList(
+            QueryWrapper<Post>()
+                .eq("status", PostStatus.SCHEDULED.name)
+                .eq("visibility", Visibility.PUBLIC.name)
+                .isNull("deleted_at")
+                .isNotNull("publish_at")
+                .le("publish_at", Instant.now())
+                .orderByAsc("publish_at")
+                .last("FOR UPDATE SKIP LOCKED"),
+        )
 
     /** 后台列表：全部未删除的文章，按最后修改时间倒序。 */
     fun pageAll(page: Int, size: Int): Page<Post> =

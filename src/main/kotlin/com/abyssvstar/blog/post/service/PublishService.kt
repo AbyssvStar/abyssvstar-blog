@@ -101,6 +101,44 @@ class PublishService(
     }
 
     /**
+     * 排期：DRAFT → SCHEDULED。
+     *
+     * 必须给一个**未来**的时间，否则定时任务无从下手。到点由 [ScheduledPublisher] 发布，
+     * 走的是与手动发布完全相同的那段代码。
+     */
+    @Transactional
+    fun schedule(postId: Long, publishAt: Instant): PostResponse {
+        val post = posts.findById(postId) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
+        if (post.status != PostStatus.DRAFT && post.status != PostStatus.SCHEDULED) {
+            throw BusinessException(ErrorCode.INVALID_STATE_TRANSITION, "只有草稿或已排期的文章可以改排期")
+        }
+        if (!publishAt.isAfter(Instant.now())) {
+            throw BusinessException(ErrorCode.PUBLISH_TIME_IN_PAST)
+        }
+
+        post.status = PostStatus.SCHEDULED
+        post.publishAt = publishAt
+        if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
+
+        return postService.getForAdmin(postId)
+    }
+
+    /** 取消排期：SCHEDULED → DRAFT，并清空 publish_at。 */
+    @Transactional
+    fun cancelSchedule(postId: Long): PostResponse {
+        val post = posts.findById(postId) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
+        if (post.status != PostStatus.SCHEDULED) {
+            throw BusinessException(ErrorCode.INVALID_STATE_TRANSITION, "只有已排期的文章可以取消排期")
+        }
+
+        post.status = PostStatus.DRAFT
+        post.publishAt = null
+        if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
+
+        return postService.getForAdmin(postId)
+    }
+
+    /**
      * 实时预览。**没有任何副作用**：不写库、不碰快照、不触发构建。
      *
      * 补偿的是静态方案的发布延迟 —— 改一个错别字不用等两分钟构建就能看到效果。
