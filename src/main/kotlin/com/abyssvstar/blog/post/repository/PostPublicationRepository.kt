@@ -2,13 +2,28 @@ package com.abyssvstar.blog.post.repository
 
 import com.abyssvstar.blog.post.domain.PostPublication
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Component
 
 /** 发布快照的查询入口。与 `posts` 是 1:1，主键就是 post_id。 */
 @Component
-class PostPublicationRepository(private val mapper: PostPublicationMapper) {
+class PostPublicationRepository(
+    private val mapper: PostPublicationMapper,
+    private val objectMapper: ObjectMapper,
+) {
 
     fun findByPostId(postId: Long): PostPublication? = mapper.selectById(postId)
+
+    /**
+     * 标签快照里含这个标签的文章 id。
+     *
+     * 用 jsonb 的 `@>` 包含判断，不用 `?` —— 那个字符会被 JDBC 当成参数占位符。
+     */
+    fun findPostIdsByTag(tag: String): List<Long> {
+        val json = objectMapper.writeValueAsString(listOf(tag))
+        return mapper.selectList(QueryWrapper<PostPublication>().apply("tags @> {0}::jsonb", json))
+            .mapNotNull { it.postId }
+    }
 
     /**
      * 这个 slug 是否已经被**别的**文章的快照占了。

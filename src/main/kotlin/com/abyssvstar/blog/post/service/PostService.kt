@@ -9,6 +9,7 @@ import com.abyssvstar.blog.post.web.dto.CreatePostRequest
 import com.abyssvstar.blog.post.web.dto.PostResponse
 import com.abyssvstar.blog.post.web.dto.PostSummaryResponse
 import com.abyssvstar.blog.post.web.dto.PublicPostResponse
+import com.abyssvstar.blog.post.web.dto.AdjacentPost
 import com.abyssvstar.blog.post.web.dto.PublicPostSummaryResponse
 import com.abyssvstar.blog.post.web.dto.UpdatePostRequest
 import com.abyssvstar.blog.shared.domain.Visibility
@@ -21,6 +22,9 @@ import com.abyssvstar.blog.taxonomy.service.TagService
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.time.YearMonth
+import java.time.ZoneId
 
 /**
  * 文章工作副本的读写。
@@ -130,9 +134,24 @@ class PostService(
 
     // ---------- 公开 ----------
 
-    /** 公开列表。可见性判定全部交给 PostRepository 里的 PublishedContentSpec。 */
-    fun listPublic(page: Int, size: Int): PageData<PublicPostSummaryResponse> {
-        val result = posts.pagePublic(page, size)
+    /**
+     * 公开列表。可见性判定全部交给 PostRepository 里的 PublishedContentSpec。
+     *
+     * `tag` / `year` / `month` 都是可选过滤，不传就是全部。
+     */
+    fun listPublic(
+        page: Int,
+        size: Int,
+        tag: String? = null,
+        year: Int? = null,
+        month: Int? = null,
+    ): PageData<PublicPostSummaryResponse> {
+        val byTag = tag?.trim()?.takeIf { it.isNotEmpty() }?.let { publications.findPostIdsByTag(it) }
+        // 标签一篇都没匹配上，直接返回空，不必再去查一次库
+        if (byTag != null && byTag.isEmpty()) return PageData.of(emptyList(), page, size, 0L)
+
+        val (from, to) = yearRange(year, month)
+        val result = posts.pagePublic(page, size, byTag, from, to)
         val pubMap = publications.findByPostIds(result.records.mapNotNull { it.id })
         val items = result.records.mapNotNull { post -> pubMap[post.id]?.toPublicSummary() }
         return PageData.of(items, page, size, result.total)
@@ -140,9 +159,34 @@ class PostService(
 
     fun getPublic(slug: String): PublicPostResponse {
         val post = posts.findPublicBySlug(slug) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
-        val publication = publications.findByPostId(requireNotNull(post.id))
+        val id = requireNotNull(post.id)
+        val publication = publications.findByPostId(id)
             ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
-        return publication.toPublic()
+
+        val publishedAt = post.publishedAt
+        return publication.toPublic(
+            prev = publishedAt?.let { posts.findPrevPublic(it, id) }?.toAdjacent(),
+            next = publishedAt?.let { posts.findNextPublic(it, id) }?.toAdjacent(),
+        )
+    }
+
+    /**
+     * 年 / 月的闭开区间。
+     *
+     * 用区间而不是 `EXTRACT(YEAR FROM ...)`：区间才吃得上 published_at 的索引。
+     * 时区取 JVM 默认（容器里是 Asia/Shanghai），和作者看到的日期一致。
+     */
+    private fun yearRange(year: Int?, month: Int?): Pair<Instant?, Instant?> {
+        if (year == null) return null to null
+        if (month != null && month !in 1..12) {
+            throw BusinessException(ErrorCode.VALIDATION_FAILED, "month 必须在 1 到 12 之间")
+        }
+
+        val ym = YearMonth.of(year, month ?: 1)
+        val zone = ZoneId.systemDefault()
+        val from = ym.atDay(1).atStartOfDay(zone).toInstant()
+        val to = ym.plusMonths(if (month != null) 1L else 12L).atDay(1).atStartOfDay(zone).toInstant()
+        return from to to
     }
 
     // ---------- 内部 ----------
@@ -209,7 +253,9 @@ class PostService(
         hasUnpublishedChanges = stale,
     )
 
-    private fun PostPublication.toPublic() = PublicPostResponse(
+    private fun Post.toAdjacent() = AdjacentPost(slug = slug, title = title)
+
+    private fun PostPublication.toPublic(prev: AdjacentPost?, next: AdjacentPost?) = PublicPostResponse(
         slug = slug,
         title = title,
         summary = summary,
@@ -219,6 +265,8 @@ class PostService(
         wordCount = wordCount,
         readingMinutes = readingMinutes,
         publishedAt = publishedAt,
+        prev = prev,
+        next = next,
     )
 
     private fun PostPublication.toPublicSummary() = PublicPostSummaryResponse(
