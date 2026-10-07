@@ -25,8 +25,19 @@ class PublicPostController(private val postService: PostService) {
     fun list(
         @RequestParam(defaultValue = "1") page: Int,
         @RequestParam(defaultValue = "10") size: Int,
+        @RequestParam(required = false) tag: String?,
+        @RequestParam(required = false) year: Int?,
+        @RequestParam(required = false) month: Int?,
     ): ApiResponse<PageData<PublicPostSummaryResponse>> =
-        ApiResponse.ok(postService.listPublic(page.coerceAtLeast(1), size.coerceIn(1, MAX_PAGE_SIZE)))
+        ApiResponse.ok(
+            postService.listPublic(
+                page = page.coerceAtLeast(1),
+                size = size.coerceIn(1, MAX_PAGE_SIZE),
+                tag = tag,
+                year = year,
+                month = month,
+            ),
+        )
 
     @GetMapping("/{slug}")
     fun detail(@PathVariable slug: String): ApiResponse<PublicPostResponse> =

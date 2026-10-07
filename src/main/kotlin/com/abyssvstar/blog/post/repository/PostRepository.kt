@@ -30,12 +30,48 @@ class PostRepository(private val mapper: PostMapper) {
     fun findPublicBySlug(slug: String): Post? =
         mapper.selectOne(PublishedContentSpec.wrapper().eq("slug", slug))
 
-    /** 公开可见的文章，按发布时间倒序分页。 */
-    fun pagePublic(page: Int, size: Int): Page<Post> =
-        mapper.selectPage(
-            Page(page.toLong(), size.toLong()),
-            PublishedContentSpec.wrapper().orderByDesc("published_at", "id"),
-        )
+    /**
+     * 公开可见的文章，按发布时间倒序分页。
+     *
+     * `restrictToIds` 用于按标签过滤：标签在快照的 jsonb 里，先在快照表上查出候选 id，
+     * 再作为条件喂回来 —— 这样可见性条件仍然只有 PublishedContentSpec 一处定义。
+     */
+    fun pagePublic(
+        page: Int,
+        size: Int,
+        restrictToIds: Collection<Long>? = null,
+        publishedFrom: Instant? = null,
+        publishedBefore: Instant? = null,
+    ): Page<Post> {
+        val wrapper = PublishedContentSpec.wrapper().orderByDesc("published_at", "id")
+        if (restrictToIds != null) wrapper.`in`("id", restrictToIds)
+        if (publishedFrom != null) wrapper.ge("published_at", publishedFrom)
+        if (publishedBefore != null) wrapper.lt("published_at", publishedBefore)
+        return mapper.selectPage(Page(page.toLong(), size.toLong()), wrapper)
+    }
+
+    /**
+     * 时间上更早的那一篇。
+     *
+     * 用 `(published_at, id)` 行比较而不是只比时间：同一秒发布两篇时不会重复也不会漏。
+     * 这个顺序必须和列表的 `published_at DESC, id DESC` 严格一致。
+     */
+    fun findPrevPublic(publishedAt: Instant, id: Long): Post? =
+        mapper.selectList(
+            PublishedContentSpec.wrapper()
+                .apply("(published_at, id) < ({0}, {1})", publishedAt, id)
+                .orderByDesc("published_at", "id")
+                .last("LIMIT 1"),
+        ).firstOrNull()
+
+    /** 时间上更晚的那一篇。 */
+    fun findNextPublic(publishedAt: Instant, id: Long): Post? =
+        mapper.selectList(
+            PublishedContentSpec.wrapper()
+                .apply("(published_at, id) > ({0}, {1})", publishedAt, id)
+                .orderByAsc("published_at", "id")
+                .last("LIMIT 1"),
+        ).firstOrNull()
 
     /** 全部公开可见的文章，顺序固定。导出接口用它 —— 顺序不稳，ETag 就不稳，304 会失效。 */
     fun findAllPublic(): List<Post> =

@@ -122,6 +122,16 @@ data class PublicPostResponse(
     val wordCount: Int,
     val readingMinutes: Int,
     val publishedAt: Instant?,
+    /** 时间上更早的那一篇 */
+    val prev: AdjacentPost? = null,
+    /** 时间上更晚的那一篇 */
+    val next: AdjacentPost? = null,
+)
+
+/** 上下篇只需要能点过去，不带正文。 */
+data class AdjacentPost(
+    val slug: String,
+    val title: String,
 )
 
 data class PublicPostSummaryResponse(
