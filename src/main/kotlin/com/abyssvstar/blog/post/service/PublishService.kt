@@ -1,5 +1,6 @@
 package com.abyssvstar.blog.post.service
 
+import com.abyssvstar.blog.media.service.AssetService
 import com.abyssvstar.blog.post.domain.Post
 import com.abyssvstar.blog.post.domain.PostPublication
 import com.abyssvstar.blog.post.domain.PostStatus
@@ -31,6 +32,7 @@ class PublishService(
     private val posts: PostRepository,
     private val publications: PostPublicationRepository,
     private val tags: TagService,
+    private val media: AssetService,
     private val markdown: MarkdownRenderer,
     private val siteBuilds: SiteBuildService,
     private val objectMapper: ObjectMapper,
@@ -160,8 +162,8 @@ class PublishService(
                 title = post.title,
                 summary = requireNotNull(post.summary),
                 html = html,
-                // 媒体模块还没做，封面 URL 暂时只能是空。等上传接口落地后从 assets.path 生成
-                coverUrl = null,
+                // 封面在发布时定格成 URL 快照：以后换图床地址（public-base-url 是配置项），线上内容不受影响
+                coverUrl = media.findPublicUrl(post.coverAssetId),
                 tags = objectMapper.writeValueAsString(tagNames),
                 wordCount = wordCount,
                 readingMinutes = TextMetrics.readingMinutes(wordCount),

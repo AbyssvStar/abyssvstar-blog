@@ -78,6 +78,8 @@ data class PostResponse(
     val summary: String?,
     val contentMd: String,
     val coverAssetId: Long?,
+    /** 封面的公开 URL（后台预览用）。还没发布时它来自 assets 表，不是快照 */
+    val coverUrl: String?,
     val status: PostStatus,
     val visibility: Visibility,
     val publishAt: Instant?,
