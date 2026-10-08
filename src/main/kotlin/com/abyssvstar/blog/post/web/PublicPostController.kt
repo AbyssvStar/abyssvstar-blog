@@ -44,7 +44,7 @@ class PublicPostController(private val postService: PostService) {
         ApiResponse.ok(postService.getPublic(slug))
 
     private companion object {
-        /** 公开接口的分页上限，见 docs/05 §4 */
+        /** 公开接口的分页上限；后台接口那侧更高，见 `AdminPostController` */
         const val MAX_PAGE_SIZE = 50
     }
 }
