@@ -18,11 +18,18 @@ object Hashing {
 object ClientIp {
 
     fun of(request: HttpServletRequest): String {
-        // 部署在 Nginx 之后，真实来源在 X-Forwarded-For 的第一跳
+        /*
+         * 只信入口 Nginx 覆盖写入的头。X-Forwarded-For 里前面的值可能是客户端自己伪造的，
+         * 所以取最后一跳，并优先用 X-Real-IP —— Nginx 要写 proxy_set_header X-Real-IP $remote_addr；
+         * 前面还挂了 CDN 的话，先用 set_real_ip_from / real_ip_header 把 $remote_addr 还原成真实访客。
+         */
+        val realIp = request.getHeader("X-Real-IP")?.split(",")?.firstOrNull()?.trim()
+        if (!realIp.isNullOrEmpty()) return realIp
+
         val forwarded = request.getHeader("X-Forwarded-For")
-            ?.split(',')
-            ?.firstOrNull()
-            ?.trim()
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.lastOrNull { it.isNotEmpty() }
         return if (!forwarded.isNullOrEmpty()) forwarded else request.remoteAddr ?: "unknown"
     }
 
