@@ -1,0 +1,41 @@
+name: ci
+
+# 只干一件事：提交的代码能不能构建、测试过不过。
+# 部署（镜像推送、静态站 rsync）是 G3 的流水线，和这个分开写。
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+      - name: 构建 + 测试
+        run: |
+          # gradlew 在仓库里是 CRLF 存的，直接 ./gradlew 会报 "./gradlew: not found"
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+          ./gradlew build --no-daemon --console=plain
+
+  admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/admin/package-lock.json
+      - name: 构建
+        run: |
+          npm ci
+          npm run build
