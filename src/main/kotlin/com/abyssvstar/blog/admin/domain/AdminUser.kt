@@ -1,5 +1,6 @@
 package com.abyssvstar.blog.admin.domain
 
+import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
@@ -25,7 +26,7 @@ data class AdminUser(
     @TableField("password_hash")
     var passwordHash: String = "",
 
-    @TableField("created_at")
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     var createdAt: Instant? = null,
 
     @TableField("last_login_at")

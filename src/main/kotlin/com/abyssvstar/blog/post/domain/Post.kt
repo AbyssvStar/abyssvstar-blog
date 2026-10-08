@@ -2,6 +2,7 @@ package com.abyssvstar.blog.post.domain
 
 import com.abyssvstar.blog.shared.domain.EsSyncStatus
 import com.abyssvstar.blog.shared.domain.Visibility
+import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.FieldStrategy
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableField
@@ -76,9 +77,10 @@ data class Post(
     @TableField("deleted_at")
     var deletedAt: Instant? = null,
 
-    @TableField("created_at")
+    // fill 不能删：MyBatis-Plus 只在实体声明了 fill 时才会调用 AuditMetaObjectHandler
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     var createdAt: Instant? = null,
 
-    @TableField("updated_at")
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     var updatedAt: Instant? = null,
 )
