@@ -39,19 +39,11 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = {}
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
-  // 非 GET 一律带上，漏了后端会直接 403
-  if (method !== 'GET' && csrfToken) headers['X-CSRF-Token'] = csrfToken
-
-  const res = await fetch(`/admin/api${path}`, {
-    method,
-    headers,
-    credentials: 'same-origin',
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-
+/**
+ * 把 envelope 拆开：code = 0 才算成功，其余一律抛 ApiError。
+ * request 和 upload 两条路都走它，免得各写一遍。
+ */
+async function unwrap<T>(res: Response): Promise<T> {
   const text = await res.text()
   if (!text) {
     throw new ApiError(-1, `服务端返回了空响应（HTTP ${res.status}）`, res.status)
@@ -70,11 +62,40 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return json.data as T
 }
 
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  // 非 GET 一律带上，漏了后端会直接 403
+  if (method !== 'GET' && csrfToken) headers['X-CSRF-Token'] = csrfToken
+
+  const res = await fetch(`/admin/api${path}`, {
+    method,
+    headers,
+    credentials: 'same-origin',
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+
+  return unwrap<T>(res)
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
   del: <T>(path: string) => request<T>('DELETE', path),
+}
+
+/**
+ * 传文件（multipart）。不能复用 request：它会写 Content-Type: application/json，
+ * 而 multipart 的 boundary 必须由浏览器自己生成。
+ */
+export async function upload<T>(path: string, file: File): Promise<T> {
+  const form = new FormData()
+  form.append('file', file, file.name)
+  const headers: Record<string, string> = {}
+  if (csrfToken) headers['X-CSRF-Token'] = csrfToken
+  const res = await fetch(`/admin/api${path}`, { method: 'POST', headers, credentials: 'same-origin', body: form })
+  return unwrap<T>(res)
 }
 
 /** 错误码常量，和后端 shared/web/ErrorCode.kt 对齐 */

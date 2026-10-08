@@ -48,6 +48,8 @@ export interface PostDetail {
   summary?: string
   contentMd: string
   coverAssetId?: number
+  /** 封面的公开 URL，后台用它显示缩略图 */
+  coverUrl?: string
   status: PostStatus
   visibility: Visibility
   publishAt?: string
@@ -68,6 +70,8 @@ export interface UpdatePostBody {
   summary?: string
   contentMd?: string
   slug?: string
+  /** 0 表示「清掉封面」：JSON 里区分不了「没传」和「传了 null」 */
+  coverAssetId?: number
   visibility?: Visibility
   tags?: string[]
   version: number
@@ -77,6 +81,7 @@ export interface CreatePostBody {
   title: string
   summary?: string
   contentMd?: string
+  coverAssetId?: number
   tags?: string[]
   visibility?: Visibility
 }
@@ -86,6 +91,17 @@ export interface PreviewResponse {
   html: string
   wordCount: number
   readingMinutes: number
+}
+
+/** POST /assets 的返回：url 可以直接写进 Markdown */
+export interface AssetInfo {
+  id: number
+  url: string
+  mime: string
+  sizeBytes: number
+  width?: number
+  height?: number
+  originalName?: string
 }
 
 /** POST /posts/slug-suggest 的返回 */

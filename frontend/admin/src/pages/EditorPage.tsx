@@ -61,6 +61,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
   const [slug, setSlug] = useState('')
   const [visibility, setVisibility] = useState<Visibility>('PUBLIC')
   const [scheduleAt, setScheduleAt] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   const [save, setSave] = useState<SaveState>({ kind: 'clean' })
   const [preview, setPreview] = useState<PreviewResponse | null>(null)
@@ -84,6 +85,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
   // 用户手动改过 slug 之后，它就不再跟随标题
   const slugTouchedRef = useRef(false)
 
+  const contentRef = useRef<HTMLTextAreaElement | null>(null)
   const saveTimer = useRef<number | null>(null)
   const previewTimer = useRef<number | null>(null)
   const slugTimer = useRef<number | null>(null)
@@ -399,6 +401,84 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
     }
   }
 
+  /** 传图后在光标处插入 Markdown。贴图和拖图都走这里 */
+  async function insertImage(file: File) {
+    setUploading(true)
+    setPublishError(null)
+    try {
+      const asset = await postsApi.uploadAsset(file)
+      insertAtCursor('![' + imageAlt(file.name) + '](' + asset.url + ')')
+    } catch (err) {
+      setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '图片上传失败')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function insertAtCursor(snippet: string) {
+    const el = contentRef.current
+    if (!el) {
+      applyDraft({ contentMd: draftRef.current.contentMd + snippet }, { preview: true })
+      return
+    }
+    const start = el.selectionStart ?? el.value.length
+    const end = el.selectionEnd ?? start
+    applyDraft({ contentMd: el.value.slice(0, start) + snippet + el.value.slice(end) }, { preview: true })
+    // 光标挪到插入内容之后，接着打字不受影响
+    requestAnimationFrame(() => {
+      el.focus()
+      const pos = start + snippet.length
+      el.setSelectionRange(pos, pos)
+    })
+  }
+
+  function imageAlt(name: string): string {
+    const base = name.replace(/\.[^.]+$/, '').trim()
+    return base || '图片'
+  }
+
+  function onPasteImage(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const files = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'))
+    if (files.length === 0) return
+    e.preventDefault()
+    for (const f of files) void insertImage(f)
+  }
+
+  function onDropImage(e: React.DragEvent<HTMLTextAreaElement>) {
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+    if (files.length === 0) return
+    e.preventDefault()
+    for (const f of files) void insertImage(f)
+  }
+
+  /** 换 / 清封面（0 = 清空）。封面不进 Draft，改完立刻落库 */
+  async function changeCover(assetId: number) {
+    setPublishError(null)
+    try {
+      const updated = await postsApi.update(postId, { coverAssetId: assetId, version: versionRef.current })
+      versionRef.current = updated.version
+      setPost(updated)
+    } catch (err) {
+      setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '封面保存失败')
+    }
+  }
+
+  async function pickCover(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setPublishError(null)
+    try {
+      const asset = await postsApi.uploadAsset(file)
+      await changeCover(asset.id)
+    } catch (err) {
+      setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '封面上传失败')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   function reload() {
     conflictRef.current = false
     setSave({ kind: 'clean' })
@@ -495,6 +575,28 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
         </p>
       )}
 
+      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+        <span style={{ color: 'var(--text-muted)' }}>封面</span>
+        {post.coverUrl ? (
+          <img
+            src={post.coverUrl}
+            alt="封面"
+            style={{ border: '1px solid var(--border)', borderRadius: 4, height: 48, objectFit: 'cover', width: 84 }}
+          />
+        ) : (
+          <span className="faint">未设置</span>
+        )}
+        <label className="btn">
+          {uploading ? '上传中…' : post.coverUrl ? '换一张' : '上传封面'}
+          <input type="file" accept="image/*" hidden onChange={(e) => void pickCover(e)} />
+        </label>
+        {post.coverUrl && (
+          <button className="btn btn--ghost" onClick={() => void changeCover(0)} disabled={uploading}>
+            移除封面
+          </button>
+        )}
+      </div>
+
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <span style={{ color: 'var(--text-muted)' }}>可见性</span>
         <button
@@ -544,9 +646,12 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <textarea
+          ref={contentRef}
           value={contentMd}
           onChange={(e) => applyDraft({ contentMd: e.target.value }, { preview: true })}
-          placeholder="用 Markdown 写正文…"
+          onPaste={onPasteImage}
+          onDrop={onDropImage}
+          placeholder="用 Markdown 写正文…（图片可以直接拖进来或粘贴进来）"
           spellCheck={false}
           className="field field--mono"
           style={{ lineHeight: 1.7, minHeight: '30rem' }}
