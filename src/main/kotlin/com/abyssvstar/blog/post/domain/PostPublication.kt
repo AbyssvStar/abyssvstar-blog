@@ -1,6 +1,7 @@
 package com.abyssvstar.blog.post.domain
 
 import com.abyssvstar.blog.shared.persistence.JsonbTypeHandler
+import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
 import com.baomidou.mybatisplus.annotation.TableName
@@ -52,9 +53,9 @@ data class PostPublication(
     @TableField("published_at")
     var publishedAt: Instant? = null,
 
-    @TableField("created_at")
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     var createdAt: Instant? = null,
 
-    @TableField("updated_at")
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     var updatedAt: Instant? = null,
 )

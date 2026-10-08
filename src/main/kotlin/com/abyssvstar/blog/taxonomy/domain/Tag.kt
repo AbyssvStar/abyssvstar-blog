@@ -1,5 +1,6 @@
 package com.abyssvstar.blog.taxonomy.domain
 
+import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
@@ -19,6 +20,6 @@ data class Tag(
     @TableField("slug")
     var slug: String = "",
 
-    @TableField("created_at")
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     var createdAt: Instant? = null,
 )
