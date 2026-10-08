@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, Code } from '../api/client'
 import { parseTags, postsApi } from '../api/posts'
-import type { PostDetail, PreviewResponse } from '../api/types'
+import type { PostDetail, PreviewResponse, Visibility } from '../api/types'
 
 /** 自动保存：停止输入多久之后写一次（设计上定的是 30 秒） */
 const AUTOSAVE_DELAY_MS = 30_000
@@ -23,9 +23,17 @@ interface Draft {
   contentMd: string
   tagsText: string
   slug: string
+  visibility: Visibility
 }
 
-const EMPTY_DRAFT: Draft = { title: '', summary: '', contentMd: '', tagsText: '', slug: '' }
+const EMPTY_DRAFT: Draft = {
+  title: '',
+  summary: '',
+  contentMd: '',
+  tagsText: '',
+  slug: '',
+  visibility: 'PUBLIC',
+}
 
 /**
  * 保存状态。
@@ -51,6 +59,8 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
   const [contentMd, setContentMd] = useState('')
   const [tagsText, setTagsText] = useState('')
   const [slug, setSlug] = useState('')
+  const [visibility, setVisibility] = useState<Visibility>('PUBLIC')
+  const [scheduleAt, setScheduleAt] = useState('')
 
   const [save, setSave] = useState<SaveState>({ kind: 'clean' })
   const [preview, setPreview] = useState<PreviewResponse | null>(null)
@@ -94,6 +104,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
         // 空 slug 就不发，交给后端保留原值
         slug: d.slug.trim() || undefined,
         tags: parseTags(d.tagsText),
+        visibility: d.visibility,
         // 关键：带上版本。后端对不上就 409，而不是覆盖别人的修改
         version: versionRef.current,
       })
@@ -176,6 +187,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
       if (patch.contentMd !== undefined) setContentMd(patch.contentMd)
       if (patch.tagsText !== undefined) setTagsText(patch.tagsText)
       if (patch.slug !== undefined) setSlug(patch.slug)
+      if (patch.visibility !== undefined) setVisibility(patch.visibility)
 
       dirtyRef.current = true
       setSave({ kind: 'dirty' })
@@ -193,6 +205,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
       contentMd: p.contentMd,
       tagsText: p.tags.join(', '),
       slug: p.slug,
+      visibility: p.visibility,
     }
     draftRef.current = d
     versionRef.current = p.version
@@ -203,6 +216,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
     setContentMd(d.contentMd)
     setTagsText(d.tagsText)
     setSlug(d.slug)
+    setVisibility(d.visibility)
   }, [])
 
   // ---------- 生命周期 ----------
@@ -317,6 +331,74 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
     }
   }
 
+  /**
+   * 改可见性必须立刻落地，不能等 30 秒后的自动保存：转私密会顺手删掉发布快照（等于撤回），
+   * 拖着不写，那 30 秒里线上还是公开的。
+   */
+  async function changeVisibility(next: Visibility) {
+    applyDraft({ visibility: next })
+    await doSave()
+  }
+
+  /**
+   * 删除。工作副本软删、发布快照直接删 —— 后者是让线上立刻消失的关键，
+   * 所以必须明确确认（软删的工作副本要恢复得直接改库，界面上没有撤销）。
+   */
+  async function removePost() {
+    const ok = window.confirm(
+      '删除这篇？\n\n工作副本是软删（列表里不再出现，要恢复得直接改库），\n发布快照会立刻删掉 —— 已经上线的话线上那篇会跟着消失。',
+    )
+    if (!ok) return
+    setPublishing(true)
+    setPublishError(null)
+    try {
+      await postsApi.remove(postId)
+      onBack()
+    } catch (err) {
+      setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '删除失败')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  /** 排期。有改动先保存 —— 到点发出去的是库里的工作副本，不是屏幕上这份 */
+  async function schedule() {
+    const when = new Date(scheduleAt)
+    if (!scheduleAt || Number.isNaN(when.getTime())) {
+      setPublishError('先选一个完整的时间')
+      return
+    }
+    setPublishing(true)
+    setPublishError(null)
+    try {
+      if (dirtyRef.current) {
+        const saved = await doSave()
+        if (!saved) {
+          setPublishError('没能保存最新内容，已中止排期。')
+          return
+        }
+      }
+      applyLoaded(await postsApi.schedule(postId, when.toISOString()))
+    } catch (err) {
+      setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '排期失败')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  /** 取消排期，回到草稿 */
+  async function cancelSchedule() {
+    setPublishing(true)
+    setPublishError(null)
+    try {
+      applyLoaded(await postsApi.cancelSchedule(postId))
+    } catch (err) {
+      setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '取消排期失败')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   function reload() {
     conflictRef.current = false
     setSave({ kind: 'clean' })
@@ -329,6 +411,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
   if (!post) return <p className="muted">加载中…</p>
 
   const tags = parseTags(tagsText)
+  const saving = save.kind === 'saving'
   const archived = post.status === 'ARCHIVED'
   const publishedNoChange = post.status === 'PUBLISHED' && !post.hasUnpublishedChanges
 
@@ -402,7 +485,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
       <input
         value={tagsText}
         onChange={(e) => applyDraft({ tagsText: e.target.value })}
-        placeholder="标签，逗号分隔，最多 5 个"
+        placeholder="标签，用逗号分隔（标签里可以有空格），最多 5 个"
         className="field"
         style={{ marginBottom: 14 }}
       />
@@ -410,6 +493,53 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
         <p className="mb-3 text-xs" style={{ color: 'var(--danger)' }}>
           已经有 {tags.length} 个标签，超过上限 {MAX_TAGS} 个，保存会被拒绝（30004）
         </p>
+      )}
+
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+        <span style={{ color: 'var(--text-muted)' }}>可见性</span>
+        <button
+          className={'btn ' + (visibility === 'PUBLIC' ? 'btn--primary' : 'btn--ghost')}
+          onClick={() => void changeVisibility('PUBLIC')}
+          disabled={saving}
+          title={visibility === 'PUBLIC' ? '当前是公开' : '改成公开：改回公开后需要重新发布才会进线上'}
+        >
+          公开
+        </button>
+        <button
+          className={'btn ' + (visibility === 'PRIVATE' ? 'btn--primary' : 'btn--ghost')}
+          onClick={() => void changeVisibility('PRIVATE')}
+          disabled={saving}
+          title={visibility === 'PRIVATE' ? '当前是私密' : '改成私密：立刻从线上撤回'}
+        >
+          私密
+        </button>
+        <span className="faint">
+          {visibility === 'PRIVATE' ? '私密：不进公开 API、不写发布快照' : '公开：发布后进静态站与导出'}
+        </span>
+      </div>
+
+      {(post.status === 'DRAFT' || post.status === 'SCHEDULED') && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+          <span style={{ color: 'var(--text-muted)' }}>排期</span>
+          <input
+            type="datetime-local"
+            className="field"
+            style={{ width: 210 }}
+            value={scheduleAt}
+            onChange={(e) => setScheduleAt(e.target.value)}
+          />
+          <button className="btn" onClick={() => void schedule()} disabled={publishing || !scheduleAt}>
+            排期发布
+          </button>
+          {post.status === 'SCHEDULED' && (
+            <>
+              <span className="muted">已排期：{formatTime(post.publishAt)}</span>
+              <button className="btn btn--ghost" onClick={() => void cancelSchedule()} disabled={publishing}>
+                取消排期
+              </button>
+            </>
+          )}
+        </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -471,7 +601,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
             title={publishedNoChange ? '线上已是最新，没有需要发布的改动' : undefined}
             className="btn btn--primary"
           >
-            {publishing ? '处理中…' : post.status === 'PUBLISHED' ? '更新线上' : '发布'}
+            {publishing ? '处理中…' : publishLabel(post.status, visibility)}
           </button>
         )}
 
@@ -481,6 +611,11 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
           </button>
         )}
 
+        {/* 删除是不可逆的（软删的工作副本要恢复得改库），所以放最右边、用危险色 */}
+        <button className="btn btn--danger" onClick={() => void removePost()} disabled={publishing}>
+          删除
+        </button>
+
         <span className="muted">
           {STATUS_LABEL[post.status]} ｜ {post.visibility === 'PRIVATE' ? '私密' : '公开'} ｜ 版本{' '}
           {versionRef.current}
@@ -489,6 +624,20 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
       </div>
     </div>
   )
+}
+
+/** 排期时间按本地时区展示 */
+function formatTime(iso: string | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('zh-CN', { hour12: false })
+}
+
+/** 发布按钮的文案：已上线的叫「更新线上」，排期的可以立即发 */
+function publishLabel(status: PostDetail['status'], visibility: Visibility): string {
+  if (status === 'PUBLISHED') return visibility === 'PUBLIC' ? '更新线上' : '发布'
+  if (status === 'SCHEDULED') return '立即发布'
+  return '发布'
 }
 
 const STATUS_LABEL: Record<PostDetail['status'], string> = {
