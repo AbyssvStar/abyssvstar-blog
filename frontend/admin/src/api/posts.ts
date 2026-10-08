@@ -1,5 +1,6 @@
-import { api } from './client'
+import { api, upload } from './client'
 import type {
+  AssetInfo,
   CreatePostBody,
   PageData,
   PostDetail,
@@ -52,6 +53,12 @@ export const postsApi = {
    * 否则「新建」时按「未命名文章」生成的 slug 会一直挂着，成为那篇文章的永久 URL。
    */
   suggestSlug: (title: string) => api.post<SlugSuggestResponse>('/posts/slug-suggest', { title }),
+
+  /**
+   * 传一张图，拿回可以直接写进 Markdown 的 URL。
+   * 后端按文件内容判断格式、按 sha256 去重，同一张图重复上传只有一条记录。
+   */
+  uploadAsset: (file: File) => upload<AssetInfo>('/assets', file),
 }
 
 /**
