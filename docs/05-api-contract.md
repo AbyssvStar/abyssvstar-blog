@@ -210,7 +210,8 @@ Header: X-Export-Token: <token>
 | 文章 | `GET/POST /posts`、`GET/PATCH/DELETE /posts/{id}`、`POST /posts/{id}/publish`、`/archive`、`/restore`、`/preview`、`POST /posts/slug-suggest` | ✅ |
 | 文章·排期 | `POST /posts/{id}/schedule`、`/cancel-schedule` | ✅ 每分钟扫描，到点自动发布 |
 | 动态 | `GET/POST /notes`、`GET/PATCH/DELETE /notes/{id}`、`POST /notes/{id}/archive`、`/restore` | 🚧 |
-| 媒体 | `POST /assets`（multipart 上传）、`GET /assets`、`DELETE /assets/{id}` | 🚧 |
+| 媒体 | `POST /assets`（multipart 上传） | ✅ 只做了上传：内容嗅探 + 内容去重 + 落 MinIO，暂无缩略图 |
+| 媒体·其余 | `GET /assets`、`DELETE /assets/{id}` | 🚧 |
 | 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | 🚧 |
 | 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | 🚧 |
 | 站点配置 | `GET/PUT /site-config` | 🚧 待做（目前站点信息来自配置文件） |

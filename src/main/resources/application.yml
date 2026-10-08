@@ -2,6 +2,13 @@ spring:
   application:
     name: abyssvstar-blog
 
+  servlet:
+    multipart:
+      # 图片上限 5MB（和 assets.size_bytes 的约束一致）。超限在 servlet 层就被拒，
+      # 由 GlobalExceptionHandler 转成 40002，不会变成 500
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:blog}
     username: ${POSTGRES_USER:blog}
