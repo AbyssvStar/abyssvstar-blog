@@ -138,7 +138,8 @@ class PostService(
             val candidate = "$base-$n"
             if (!posts.isSlugTaken(candidate)) return candidate
         }
-        return base
+        // 和 resolveSlug 保持一致：全都撞车就报错，不返回一个注定存不下的 slug
+        throw BusinessException(ErrorCode.SLUG_TAKEN)
     }
 
     // ---------- 公开 ----------
