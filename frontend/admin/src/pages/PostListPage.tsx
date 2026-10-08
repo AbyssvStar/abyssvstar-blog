@@ -128,7 +128,7 @@ export function PostListPage({
             <tr key={post.id}>
               <td>
                 <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
-                  {/* 「有未发布的修改」那个圆点，见 docs/04 §4.1 */}
+                  {/* 「有未发布的修改」那个圆点：后端算的 hasUnpublishedChanges */}
                   {post.hasUnpublishedChanges && (
                     <span
                       title="有未发布的修改"
@@ -196,8 +196,8 @@ export function PostListPage({
 /**
  * 私密内容必须一眼看得出来。
  *
- * 这是 docs/04 §3.3 四条硬规则里的第 4 条：前三条防泄漏（永不写快照、
- * 永不进公开 API、永不进公开索引），**这一条防的是「自己看错」**。
+ * 私密内容必须一眼看得出来：前三条硬规则防泄漏（永不写快照、永不进公开 API、
+ * 永不进公开索引），**这一条防的是「自己看错」**。
  * 所以用醒目的红色徽章，而不是一个不起眼的字段。
  */
 function VisibilityBadge({ visibility }: { visibility: Visibility }) {

@@ -99,7 +99,7 @@ class AdminPostController(
     ): ApiResponse<PreviewResponse> = ApiResponse.ok(publishService.preview(body.contentMd))
 
     private companion object {
-        /** 后台接口的分页上限，见 docs/05 §4 */
+        /** 后台接口的分页上限；公开接口那侧更低，见 `PublicPostController` */
         const val MAX_PAGE_SIZE = 100
     }
 }

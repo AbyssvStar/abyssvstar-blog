@@ -3,7 +3,7 @@ import { ApiError, Code } from '../api/client'
 import { parseTags, postsApi } from '../api/posts'
 import type { PostDetail, PreviewResponse } from '../api/types'
 
-/** 自动保存：停止输入多久之后写一次（docs/04 §5 定的是 30 秒） */
+/** 自动保存：停止输入多久之后写一次（设计上定的是 30 秒） */
 const AUTOSAVE_DELAY_MS = 30_000
 
 /**
@@ -30,8 +30,8 @@ const EMPTY_DRAFT: Draft = { title: '', summary: '', contentMd: '', tagsText: ''
 /**
  * 保存状态。
  *
- * `failed` 和 `conflict` 都必须让人**看得见** —— docs/04 §5 的原话是
- * 「服务端保存失败是唯一的丢稿风险」，绝不允许静默失败。
+ * `failed` 和 `conflict` 都必须让人**看得见**：服务端保存失败是唯一的丢稿风险，
+ * 绝不允许静默失败。
  */
 type SaveState =
   | { kind: 'clean' }
@@ -303,7 +303,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
     }
   }
 
-  /** 恢复 = 后端重新发布一次，按当前工作副本重建快照（docs/04 §3.2） */
+  /** 恢复 = 后端重新发布一次，按当前工作副本重建快照 */
   async function restore() {
     setPublishing(true)
     setPublishError(null)
@@ -453,8 +453,8 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
         </button>
 
         {/*
-          归档状态下不显示发布按钮：docs/04 §3.2 里 ARCHIVED 只到 PUBLISHED 一条路，
-          就是「恢复」。两个按钮做同一件事只会让人困惑，所以只留恢复。
+          归档状态下只留「恢复」：ARCHIVED 回到线上的唯一路径就是重新发布，
+          再放一个发布按钮只会让人困惑。
         */}
         {archived ? (
           <button
