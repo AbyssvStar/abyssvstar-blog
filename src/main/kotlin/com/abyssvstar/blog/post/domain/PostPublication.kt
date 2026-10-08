@@ -2,6 +2,7 @@ package com.abyssvstar.blog.post.domain
 
 import com.abyssvstar.blog.shared.persistence.JsonbTypeHandler
 import com.baomidou.mybatisplus.annotation.FieldFill
+import com.baomidou.mybatisplus.annotation.FieldStrategy
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
 import com.baomidou.mybatisplus.annotation.TableName
@@ -32,8 +33,12 @@ data class PostPublication(
     @TableField("html")
     var html: String = "",
 
-    /** 发布时的封面 URL 快照 */
-    @TableField("cover_url")
+    /**
+     * 发布时的封面 URL 快照。
+     *
+     * 同样标 IGNORED：封面被移除后重新发布时要把 null 写进去，否则线上一直挂着旧封面。
+     */
+    @TableField(value = "cover_url", updateStrategy = FieldStrategy.IGNORED)
     var coverUrl: String? = null,
 
     /** 标签名快照。jsonb 列，写入必须声明类型，见 [JsonbTypeHandler] */

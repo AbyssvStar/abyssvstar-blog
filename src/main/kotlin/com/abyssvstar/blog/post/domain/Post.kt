@@ -37,7 +37,9 @@ data class Post(
     @TableField("content_md")
     var contentMd: String = "",
 
-    @TableField("cover_asset_id")
+    // 和 summary / publish_at 同一个理由：null 是有意义的（清空封面），
+    // 默认策略会把 null 从 UPDATE 里剔掉，"清空"就会返回 200 而库里没变
+    @TableField(value = "cover_asset_id", updateStrategy = FieldStrategy.IGNORED)
     var coverAssetId: Long? = null,
 
     @TableField("status")

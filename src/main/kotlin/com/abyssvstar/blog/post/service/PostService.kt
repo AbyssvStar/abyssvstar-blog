@@ -1,5 +1,6 @@
 package com.abyssvstar.blog.post.service
 
+import com.abyssvstar.blog.media.service.AssetService
 import com.abyssvstar.blog.post.domain.Post
 import com.abyssvstar.blog.post.domain.PostPublication
 import com.abyssvstar.blog.post.domain.PostStatus
@@ -37,6 +38,7 @@ class PostService(
     private val posts: PostRepository,
     private val publications: PostPublicationRepository,
     private val tags: TagService,
+    private val media: AssetService,
     private val objectMapper: ObjectMapper,
     private val siteBuilds: SiteBuildService,
 ) {
@@ -94,7 +96,8 @@ class PostService(
         // 摘要传空串表示清空，否则没法把已有摘要去掉
         req.summary?.let { post.summary = it.ifBlank { null } }
         req.contentMd?.let { post.contentMd = it }
-        req.coverAssetId?.let { post.coverAssetId = it }
+        // 0 表示「清掉封面」：JSON 里区分不了「没传」和「传了 null」，和 summary 传空串清空同一个路子
+        req.coverAssetId?.let { post.coverAssetId = it.takeIf { id -> id > 0 } }
         req.visibility?.let { post.visibility = it }
         req.slug?.let { post.slug = resolveSlug(it, post.title, id) }
 
@@ -236,6 +239,7 @@ class PostService(
         summary = summary,
         contentMd = contentMd,
         coverAssetId = coverAssetId,
+        coverUrl = media.findPublicUrl(coverAssetId),
         status = status,
         visibility = visibility,
         publishAt = publishAt,
