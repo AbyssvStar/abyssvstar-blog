@@ -2,7 +2,6 @@ package com.abyssvstar.blog.shared.ratelimit
 
 import com.abyssvstar.blog.shared.util.ClientIp
 import com.abyssvstar.blog.shared.web.BusinessException
-import com.abyssvstar.blog.shared.web.ErrorCode
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
@@ -38,12 +37,12 @@ class RateLimitAspect(
         when (rateLimit.countOn) {
             CountOn.ATTEMPT -> if (!limiter.tryAcquire(bucket, rateLimit.limit, window)) {
                 log.warn("限流命中 bucket={} limit={}", bucket, rateLimit.limit)
-                throw BusinessException(ErrorCode.TOO_MANY_REQUESTS)
+                throw BusinessException(rateLimit.exceededCode)
             }
 
             CountOn.FAILURE -> if (limiter.currentCount(bucket) >= rateLimit.limit) {
                 log.warn("限流命中（连续失败）bucket={} limit={}", bucket, rateLimit.limit)
-                throw BusinessException(ErrorCode.TOO_MANY_REQUESTS)
+                throw BusinessException(rateLimit.exceededCode)
             }
         }
 

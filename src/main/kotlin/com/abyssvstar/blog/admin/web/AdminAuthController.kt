@@ -10,6 +10,7 @@ import com.abyssvstar.blog.shared.security.CookieSupport
 import com.abyssvstar.blog.shared.security.SessionData
 import com.abyssvstar.blog.shared.security.SessionProperties
 import com.abyssvstar.blog.shared.web.ApiResponse
+import com.abyssvstar.blog.shared.web.ErrorCode
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
@@ -37,8 +38,10 @@ class AdminAuthController(
      *
      * 用 `CountOn.FAILURE` 而不是 `ATTEMPT`：成功不消耗额度，
      * 否则自己连登几次就把自己锁在外面了。
+     *
+     * 锁定时返回 20003；请求太频繁才是 10005，前端可以分别提示。
      */
-    @RateLimit(limit = 5, window = "15m", countOn = CountOn.FAILURE)
+    @RateLimit(limit = 5, window = "15m", countOn = CountOn.FAILURE, exceededCode = ErrorCode.LOGIN_LOCKED)
     @PostMapping("/login")
     fun login(
         @Valid @RequestBody body: LoginRequest,

@@ -1,5 +1,7 @@
 package com.abyssvstar.blog.shared.ratelimit
 
+import com.abyssvstar.blog.shared.web.ErrorCode
+
 /**
  * 限流注解。
  *
@@ -18,6 +20,8 @@ annotation class RateLimit(
     val window: String,
     /** 计次时机 */
     val countOn: CountOn = CountOn.ATTEMPT,
+    /** 超限时抛的错误码。登录用它返回 20003，好让前端区分「被锁」和「请求太频繁」 */
+    val exceededCode: ErrorCode = ErrorCode.TOO_MANY_REQUESTS,
 )
 
 enum class KeyBy {
