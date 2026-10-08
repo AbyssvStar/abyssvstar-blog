@@ -215,7 +215,7 @@ Header: X-Export-Token: <token>
 | 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | 🚧 |
 | 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | 🚧 |
 | 站点配置 | `GET/PUT /site-config` | 🚧 待做（目前站点信息来自配置文件） |
-| 构建 | `GET /builds`、`POST /builds/trigger`（手动触发） | 🚧 待做（`site_builds` 表已在写数据，缺只读接口与手动触发） |
+| 构建 | `GET /builds`、`POST /builds/trigger`（手动触发） | ✅ 10s 扫描 + 30s 防抖合并成一次 `repository_dispatch`；需 `BLOG_SITE_BUILD_ENABLED=true` + token 才真的发出去 |
 | 统计 | `GET /stats`（阅读量 / AI 成本 / 内存快照） | 🚧 待做 |
 | AI | `POST /ai/summary`、`/ai/tags`、`/ai/related` | 🚧 G5 |
 
