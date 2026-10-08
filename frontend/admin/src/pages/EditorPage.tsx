@@ -99,6 +99,17 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
       })
       // 版本从响应里取，不能用旧的 —— 每次成功保存后端都会 +1
       versionRef.current = updated.version
+      /*
+       * 必须把响应写回 post。
+       *
+       * 否则 post.hasUnpublishedChanges 一直停留在「加载时」的值（已发布的就是 false），
+       * 「保存草稿 → 更新线上」这条路就走不通：按钮一直是禁用的，
+       * 非得退出去重新进来（重新 GET）才恢复。
+       *
+       * 注意**不能**换成 applyLoaded —— 那会把输入框重置成响应里的值，
+       * 而用户可能在保存期间又敲了几个字。
+       */
+      setPost(updated)
       dirtyRef.current = false
       setSave({ kind: 'saved', at: new Date() })
       return true
