@@ -118,7 +118,10 @@ class PostService(
     fun delete(id: Long) {
         posts.findById(id) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
         posts.softDelete(id)
-        publications.deleteByPostId(id)
+        // 快照没了，线上那篇静态页必须跟着消失，所以要请求重建
+        if (publications.deleteByPostId(id)) {
+            siteBuilds.requestBuild("post.deleted:$id")
+        }
     }
 
     /** 按标题给一个当前没被占用的 slug。前端可以在用户手改之前先填上。 */
