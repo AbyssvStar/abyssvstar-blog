@@ -108,3 +108,17 @@ export interface AssetInfo {
 export interface SlugSuggestResponse {
   slug: string
 }
+
+export type BuildStatus = 'PENDING' | 'FIRED' | 'FAILED' | 'CANCELLED'
+
+/** 一条静态站构建记录 */
+export interface SiteBuildInfo {
+  id: number
+  reason?: string
+  status: BuildStatus
+  requestedAt?: string
+  firedAt?: string
+  /** GitHub Actions 页面。dispatch 拿不到精确的 run，只能给列表页 */
+  runUrl?: string
+  error?: string
+}
