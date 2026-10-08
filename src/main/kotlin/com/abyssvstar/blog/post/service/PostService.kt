@@ -98,6 +98,12 @@ class PostService(
         req.visibility?.let { post.visibility = it }
         req.slug?.let { post.slug = resolveSlug(it, post.title, id) }
 
+        // 从私密改回公开：快照在转私密时就已经删掉了，状态不能还停在 PUBLISHED ——
+        // 那会变成「后台说已发布、公开接口查不到内容」。退回草稿，明确告诉人要重新发布。
+        if (post.visibility == Visibility.PUBLIC && post.status == PostStatus.PUBLISHED && publications.findByPostId(id) == null) {
+            post.status = PostStatus.DRAFT
+        }
+
         if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
         req.tags?.let { tags.replaceTags(id, it) }
 
