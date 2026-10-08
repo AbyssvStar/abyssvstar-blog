@@ -119,6 +119,10 @@ services:
       BLOG_COOKIE_SECURE: ${BLOG_COOKIE_SECURE:-true}
       # 不给默认值。为空时导出接口拒绝服务，但应用照常启动
       BLOG_EXPORT_TOKEN: ${BLOG_EXPORT_TOKEN:-}
+      BLOG_SITE_BUILD_ENABLED: ${BLOG_SITE_BUILD_ENABLED:-false}
+      BLOG_SITE_BUILD_REPOSITORY: ${BLOG_SITE_BUILD_REPOSITORY:-AbyssvStar/abyssvstar-blog}
+      BLOG_SITE_BUILD_TOKEN: ${BLOG_SITE_BUILD_TOKEN:-}
+      BLOG_SITE_BUILD_API_BASE: ${BLOG_SITE_BUILD_API_BASE:-https://api.github.com}
       JAVA_TOOL_OPTIONS: "-Xmx512m -XX:MaxMetaspaceSize=160m -XX:+UseSerialGC -Djava.awt.headless=true -Duser.timezone=Asia/Shanghai"
     ports:
       - "127.0.0.1:8080:8080"
