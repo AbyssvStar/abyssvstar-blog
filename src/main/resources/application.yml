@@ -25,11 +25,8 @@ spring:
       port: ${REDIS_PORT:6379}
       timeout: 2s
       connect-timeout: 2s
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 4
-          min-idle: 1
+      # 刻意不配 lettuce.pool：池化要 commons-pool2，而本项目没引它 —— 配了也不生效。
+      # Lettuce 默认复用一条连接，这个量级够用
 
   jackson:
     default-property-inclusion: non_null
