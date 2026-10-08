@@ -36,6 +36,15 @@ export const postsApi = {
   archive: (id: number) => api.post<PostDetail>(`/posts/${id}/archive`),
   restore: (id: number) => api.post<PostDetail>(`/posts/${id}/restore`),
 
+  /** 删除。工作副本软删（列表里不再出现），发布快照直接删掉 —— 上线了的话线上那篇跟着消失 */
+  remove: (id: number) => api.del<unknown>(`/posts/${id}`),
+
+  /** 排期发布。到点由后端定时任务走与手动发布完全相同的流程，时间必须是未来 */
+  schedule: (id: number, publishAt: string) => api.post<PostDetail>(`/posts/${id}/schedule`, { publishAt }),
+
+  /** 取消排期，回到草稿 */
+  cancelSchedule: (id: number) => api.post<PostDetail>(`/posts/${id}/cancel-schedule`),
+
   /**
    * 按标题要一个当前没被占用的 slug。
    *
@@ -45,10 +54,15 @@ export const postsApi = {
   suggestSlug: (title: string) => api.post<SlugSuggestResponse>('/posts/slug-suggest', { title }),
 }
 
-/** 标签输入框用逗号或空格分隔，这里拆成数组。 */
+/**
+ * 标签输入框用逗号分隔，这里拆成数组。
+ *
+ * 只按逗号切，不像早先那样连空白也切：标签名里带空格很常见（Spring Boot），
+ * 按空白切会让它变成两个标签。
+ */
 export function parseTags(input: string): string[] {
   return input
-    .split(/[,，\s]+/)
+    .split(/[,，]/)
     .map((t) => t.trim())
     .filter((t) => t.length > 0)
 }
