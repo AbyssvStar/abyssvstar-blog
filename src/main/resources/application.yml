@@ -92,6 +92,15 @@ blog:
   export:
     # 只从环境变量来，不留默认值。为空时导出接口拒绝服务，而不是裸奔
     token: ${BLOG_EXPORT_TOKEN:}
+  site-build:
+    # 生产必须显式打开，否则发布了也不会重建站
+    enabled: ${BLOG_SITE_BUILD_ENABLED:false}
+    repository: ${BLOG_SITE_BUILD_REPOSITORY:}
+    # 能发 repository_dispatch 的 token，只从环境变量来
+    token: ${BLOG_SITE_BUILD_TOKEN:}
+    api-base: ${BLOG_SITE_BUILD_API_BASE:https://api.github.com}
+    debounce: ${BLOG_SITE_BUILD_DEBOUNCE:30s}
+    scan-interval-ms: ${BLOG_SITE_BUILD_SCAN_INTERVAL_MS:10000}
   rate-limit:
     # 可以关闭限流
     enabled: ${BLOG_RATE_LIMIT_ENABLED:true}
