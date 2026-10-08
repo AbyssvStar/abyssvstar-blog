@@ -247,7 +247,7 @@ GitHub Actions:
 | 前端静态化 | 省 300–500MB 内存 + SEO 完美 |
 | **静态生成而非后端渲染 / SPA** | 见 §7.2：博客"写一次读一万次"，把成本从读路径挪到写路径 |
 | **单模块分包而非 Gradle 多模块** | 见 §7.1：多模块买的是"编译器守边界"，一个人时用不上，却放大"改主意"的成本 |
-| **全库只有 1 个 interface** | 没有第二个实现时，抽象是负债。见 §7.1.3 |
+| **业务侧零自造接口** | 没有第二个实现时，抽象就是负债；现有的 interface 全是 MyBatis 的 Mapper（框架要求）。见 §7.1.3 |
 | **图片处理用 JDK ImageIO** | 见 §7.3 |
 | **缩略图同步生成，不是异步** | 见 §7.3 |
 | **后台实时预览** | 静态方案的发布延迟由预览补偿。见 §4.6 |
@@ -304,11 +304,12 @@ post  note  comment  media  taxonomy  metrics  export  sitebuild  admin  shared 
 
 #### 7.1.3 抽象纪律
 
-**当前整个代码库只有 1 个 interface**：`MarkdownRenderer`。这个数字是刻意压出来的。
+**业务侧一个自造接口都没有**。仓库里能看到的 interface 全是 MyBatis 的 Mapper ——
+框架要求声明成 interface 才能生成代理，那是被逼的，不是设计。
 
 > **没有第二个实现的时候，接口就是负债** —— 多一个文件、多一次跳转、改个参数要动两处。
 
-- `MarkdownRenderer` 有接口：真的有两个实现（占位版 + 将来接 commonmark）
+- `MarkdownRenderer` 是具体类，直接依赖：设计初稿里写的「占位版 + 将来接 commonmark 两个实现」没有出现
 - `SearchPort` 会有接口：真的有 ES 与 PG 降级两个实现
 - **其他一律直接依赖**
 
