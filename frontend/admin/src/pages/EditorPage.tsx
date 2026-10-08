@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, Code } from '../api/client'
+import { buildsApi } from '../api/builds'
 import { parseTags, postsApi } from '../api/posts'
-import type { PostDetail, PreviewResponse, Visibility } from '../api/types'
+import type { PostDetail, PreviewResponse, SiteBuildInfo, Visibility } from '../api/types'
 
 /** 自动保存：停止输入多久之后写一次（设计上定的是 30 秒） */
 const AUTOSAVE_DELAY_MS = 30_000
@@ -62,6 +63,9 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
   const [visibility, setVisibility] = useState<Visibility>('PUBLIC')
   const [scheduleAt, setScheduleAt] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [builds, setBuilds] = useState<SiteBuildInfo[] | null>(null)
+  const [buildsFailed, setBuildsFailed] = useState(false)
+  const [buildBusy, setBuildBusy] = useState(false)
 
   const [save, setSave] = useState<SaveState>({ kind: 'clean' })
   const [preview, setPreview] = useState<PreviewResponse | null>(null)
@@ -298,6 +302,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
       }
       applyLoaded(await postsApi.publish(postId))
       setSave({ kind: 'clean' })
+      void refreshBuilds()
     } catch (err) {
       // 30007 缺摘要、30002 slug 撞车
       setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '发布失败')
@@ -312,6 +317,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
     try {
       applyLoaded(await postsApi.archive(postId))
       setSave({ kind: 'clean' })
+      void refreshBuilds()
     } catch (err) {
       setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '归档失败')
     } finally {
@@ -326,6 +332,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
     try {
       applyLoaded(await postsApi.restore(postId))
       setSave({ kind: 'clean' })
+      void refreshBuilds()
     } catch (err) {
       setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '恢复失败')
     } finally {
@@ -479,6 +486,41 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
     }
   }
 
+  /** 构建状态：发布不等于上线，这里回答「站重建了没有」 */
+  const refreshBuilds = useCallback(async () => {
+    try {
+      setBuilds((await buildsApi.list(1, 5)).items)
+      setBuildsFailed(false)
+    } catch {
+      // 构建状态只是附带信息，拉不到不该打断写作
+      setBuildsFailed(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshBuilds()
+  }, [refreshBuilds])
+
+  // 有排队中的构建就每 10 秒看一眼，落地了自动停
+  const pendingBuilds = builds?.filter((b) => b.status === 'PENDING').length ?? 0
+  useEffect(() => {
+    if (pendingBuilds === 0) return
+    const timer = window.setInterval(() => void refreshBuilds(), 10_000)
+    return () => window.clearInterval(timer)
+  }, [pendingBuilds, refreshBuilds])
+
+  async function triggerBuild() {
+    setBuildBusy(true)
+    try {
+      await buildsApi.trigger()
+      await refreshBuilds()
+    } catch (err) {
+      setPublishError(err instanceof ApiError ? `${err.message}（${err.code}）` : '触发构建失败')
+    } finally {
+      setBuildBusy(false)
+    }
+  }
+
   function reload() {
     conflictRef.current = false
     setSave({ kind: 'clean' })
@@ -494,6 +536,7 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
   const saving = save.kind === 'saving'
   const archived = post.status === 'ARCHIVED'
   const publishedNoChange = post.status === 'PUBLISHED' && !post.hasUnpublishedChanges
+  const lastBuild = builds?.find((b) => b.status !== 'PENDING')
 
   return (
     <div>
@@ -726,6 +769,33 @@ export function EditorPage({ postId, onBack }: { postId: number; onBack: () => v
           {versionRef.current}
           {post.hasUnpublishedChanges ? ' ｜ ● 有未发布的修改' : ' ｜ 线上已是最新'}
         </span>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+        <span style={{ color: 'var(--text-muted)' }}>站点</span>
+        {buildsFailed ? (
+          <span className="faint">构建状态读取失败（不影响写作）</span>
+        ) : builds === null ? (
+          <span className="faint">读取中…</span>
+        ) : pendingBuilds > 0 ? (
+          <span>已排队重建（{pendingBuilds} 条待触发，最多等 30 秒）</span>
+        ) : lastBuild ? (
+          lastBuild.status === 'FAILED' ? (
+            <span style={{ color: 'var(--danger)' }}>最近构建失败：{lastBuild.error ?? '原因见日志'}</span>
+          ) : (
+            <span>最近构建：成功 {formatTime(lastBuild.firedAt)}</span>
+          )
+        ) : (
+          <span className="faint">还没触发过构建</span>
+        )}
+        {lastBuild?.runUrl && (
+          <a href={lastBuild.runUrl} target="_blank" rel="noreferrer" className="underline">
+            Actions ↗
+          </a>
+        )}
+        <button className="btn btn--ghost" onClick={() => void triggerBuild()} disabled={buildBusy}>
+          {buildBusy ? '触发中…' : '立即重建'}
+        </button>
       </div>
     </div>
   )
