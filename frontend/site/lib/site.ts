@@ -6,9 +6,12 @@
  */
 export const site = {
   title: 'AbyssvStar',
-  // 标题下面那一行：一句话讲清这里是什么
-  tagline: '写代码，也写为什么这么写',
-  description: 'AbyssvStar 的个人站点：技术文章、随手笔记，以及一个能问「我写过什么」的检索。',
+  /** 首页的大字标题：就是站名的意思，不当口号喊 */
+  tagline: '深渊与星',
+  /** 首页那句说明：只讲这里放什么，不用形容词 */
+  intro: '这里放我写的东西：技术笔记、工程里的取舍，以及一些还没想清楚的记录。',
+  /** 给搜索引擎和社交卡片用的一句话 */
+  description: 'AbyssvStar 的个人站点：技术笔记、工程取舍与随笔。',
   author: 'AbyssvStar',
   /** canonical / RSS / sitemap 用的绝对地址前缀 */
   url: (process.env.SITE_URL ?? 'https://blog.example.com').replace(/\/$/, ''),
