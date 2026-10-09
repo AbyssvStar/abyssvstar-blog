@@ -67,8 +67,14 @@ async function fetchExport(): Promise<ExportPayload> {
     // 宁可让构建失败，也不要发一个空站上去 —— 那比构建失败难发现得多
     throw new Error(`拉取内容失败（${EXPORT_URL}）：${describeError(cause)}`)
   }
+  if (res.status === 401 || res.status === 403) {
+    throw new Error(
+      `导出接口拒绝了这次请求（${res.status}）：EXPORT_TOKEN 没配、或者和服务端的不一致。` +
+        '本地开发写进 frontend/site/.env.local（已在 .gitignore 里），CI 用 Secrets 传。',
+    )
+  }
   if (!res.ok) {
-    throw new Error(`导出接口返回 ${res.status}（${EXPORT_URL}）。检查 EXPORT_TOKEN 与服务端是否一致`)
+    throw new Error(`导出接口返回 ${res.status}（${EXPORT_URL}）`)
   }
 
   const body = (await res.json()) as { code: number; message: string; data: ExportPayload }
