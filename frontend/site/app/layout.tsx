@@ -25,30 +25,11 @@ export const metadata: Metadata = {
   },
 }
 
-/**
- * 首屏之前执行：把 data-theme 定下来，避免浅色用户刷新时先闪一下深色。
- * 这是 docs/07 里点名必须做的一步。
- */
-const themeScript = `
-;(function () {
-  try {
-    var saved = localStorage.getItem('site-theme')
-    if (saved !== 'light' && saved !== 'dark') {
-      saved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
-    }
-    document.documentElement.setAttribute('data-theme', saved)
-  } catch (e) {
-    document.documentElement.setAttribute('data-theme', 'dark')
-  }
-})()
-`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // 主题不靠脚本抢跑：没写 data-theme 就跟随系统偏好，写了就照写的来（见 globals.css 的令牌一节）
   return (
-    <html lang="zh-CN" data-theme="dark" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang="zh-CN" suppressHydrationWarning>
       <body>
         <div className="backdrop" aria-hidden="true">
           <div className="backdrop__grid" />
