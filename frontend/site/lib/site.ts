@@ -24,6 +24,8 @@ export const site = {
   startedAt: '2026-10-01',
   /** 页脚展示的代码仓库 */
   repo: 'https://github.com/AbyssvStar/abyssvstar-blog',
+  /** 文章页底部那行声明。换成你想要的许可（或留空字符串去掉整行） */
+  license: '转载请注明出处。',
 } as const
 
 /** 列表每页几条。静态导出下没有服务端分页，页码是构建时切好的 */
