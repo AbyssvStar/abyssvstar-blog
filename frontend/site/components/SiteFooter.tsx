@@ -18,7 +18,7 @@ export function SiteFooter() {
             <div className="mono" style={{ color: 'var(--text)' }}>
               {site.title}
             </div>
-            <p style={{ marginTop: '0.5rem', maxWidth: '22rem' }}>{site.tagline}</p>
+            <p style={{ marginTop: '0.5rem', maxWidth: '22rem' }}>{site.description}</p>
           </div>
           <div>
             <div className="kicker" style={{ marginBottom: '0.5rem' }}>
