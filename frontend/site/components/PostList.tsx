@@ -7,14 +7,21 @@ export function PostGrid({ posts }: { posts: ExportPost[] }) {
   return (
     <div className="grid-cards">
       {posts.map((post) => (
-        <Link key={post.slug} href={`/posts/${post.slug}/`} className="card">
+        // 不能把整张卡片做成 <a>：标签也是链接，<a> 套 <a> 会触发 hydration 错误。
+        // 改成「拉伸链接」——标题是链接，它的 ::after 铺满整张卡片，于是整卡可点、标签也能单独点。
+        <div key={post.slug} className="card">
+          {post.coverUrl && (
+            <img className="card__cover" src={post.coverUrl} alt="" loading="lazy" decoding="async" />
+          )}
           <div className="mono" style={{ color: 'var(--text-faint)', fontSize: '0.72rem' }}>
             {formatDate(post.publishedAt)} · {post.readingMinutes} 分钟
           </div>
-          <div className="card__title">{post.title}</div>
+          <Link href={`/posts/${post.slug}/`} className="card__title card__link">
+            {post.title}
+          </Link>
           <p className="card__summary">{post.summary}</p>
           <TagChips tags={post.tags} />
-        </Link>
+        </div>
       ))}
     </div>
   )

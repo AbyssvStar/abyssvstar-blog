@@ -8,6 +8,8 @@ import { absoluteUrl, site } from '@/lib/site'
 import { PostMeta } from '@/components/PostList'
 import { ReadingProgress } from '@/components/ReadingProgress'
 import { CodeCopy } from '@/components/CodeCopy'
+import { ImageZoom } from '@/components/ImageZoom'
+import { BackToTop } from '@/components/BackToTop'
 import { Toc } from '@/components/Toc'
 
 export const dynamicParams = false
@@ -57,7 +59,14 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   return (
     <>
       <ReadingProgress />
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+
+      {post.coverUrl && (
+        <div className="post-cover">
+          <img src={post.coverUrl} alt="" decoding="async" />
+        </div>
+      )}
 
       <article className="wrap article">
         <div>
@@ -70,18 +79,9 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             <PostMeta post={post} />
           </header>
 
-          {post.coverUrl && (
-            // 封面尺寸暂时拿不到（导出里没有图片尺寸表），先让它按容器宽度自适应
-            <img
-              src={post.coverUrl}
-              alt={post.title}
-              decoding="async"
-              style={{ border: '1px solid var(--border-soft)', borderRadius: 6, height: 'auto', marginBottom: '2rem', width: '100%' }}
-            />
-          )}
-
           <div className="md-body" id="post-body" dangerouslySetInnerHTML={{ __html: html }} />
           <CodeCopy containerId="post-body" />
+          <ImageZoom containerId="post-body" />
 
           {(prev || next) && (
             <nav className="prevnext">
@@ -112,8 +112,11 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             </nav>
           )}
 
-          <footer className="mono faint" style={{ fontSize: '0.72rem', marginTop: '2.5rem' }}>
-            发布于 {formatDate(post.publishedAt)} · 静态构建
+          <footer className="license">
+            <div className="mono" style={{ marginBottom: '0.4rem' }}>
+              发布于 {formatDate(post.publishedAt)} · 静态构建
+            </div>
+            {site.license}
           </footer>
         </div>
       </article>
