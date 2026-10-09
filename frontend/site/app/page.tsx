@@ -13,9 +13,8 @@ export default async function HomePage() {
   return (
     <>
       <section className="wrap hero">
-        <div className="kicker">{site.title}</div>
         <div className="hero__mark" />
-        <h1 className="hero__title">{site.tagline}</h1>
+        <h1 className="hero__title">{site.title}</h1>
         <p className="hero__desc">{site.intro}</p>
 
         <div className="stats">

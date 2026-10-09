@@ -7,7 +7,7 @@ import { SiteFooter } from '@/components/SiteFooter'
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: `${site.title} · ${site.tagline}`,
+    default: site.title,
     template: `%s · ${site.title}`,
   },
   description: site.description,
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: site.title,
-    title: `${site.title} · ${site.tagline}`,
+    title: site.title,
     description: site.description,
     locale: 'zh_CN',
   },
