@@ -843,3 +843,104 @@ button.chip:disabled {
   margin: 0;
   padding: 0;
 }
+/* ---------- 卡片缩略图与「拉伸链接」 ---------- */
+.card {
+  position: relative;
+}
+
+.card__cover {
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  margin: -0.35rem 0 0.4rem;
+  object-fit: cover;
+  width: 100%;
+}
+
+/* 标题是链接，它的伪元素铺满整张卡：整卡可点，但标签仍能单独点 */
+.card__link::after {
+  content: '';
+  inset: 0;
+  position: absolute;
+}
+
+.chip {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- 文章封面：通栏一条，底部淡出到背景 ---------- */
+.post-cover {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.post-cover img {
+  aspect-ratio: 21 / 9;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.post-cover::after {
+  background: linear-gradient(to bottom, transparent 50%, var(--bg));
+  bottom: 0;
+  content: '';
+  height: 45%;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+/* ---------- 正文图片点击放大 ---------- */
+.md-body img.zoomable {
+  cursor: zoom-in;
+}
+
+.lightbox {
+  background: rgba(0, 0, 0, 0.88);
+  cursor: zoom-out;
+  display: grid;
+  inset: 0;
+  padding: 4vh 4vw;
+  place-items: center;
+  position: fixed;
+  z-index: 60;
+}
+
+.lightbox img {
+  border-radius: 4px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  max-height: 92vh;
+  max-width: 100%;
+}
+
+/* ---------- 回到顶部 ---------- */
+.to-top {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 50%;
+  bottom: 1.25rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  height: 2.25rem;
+  position: fixed;
+  right: 1.25rem;
+  transition: color 0.15s, border-color 0.15s;
+  width: 2.25rem;
+  z-index: 25;
+}
+
+.to-top:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- 文章底部声明 ---------- */
+.license {
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  margin-top: 3rem;
+  padding-top: 1rem;
+}

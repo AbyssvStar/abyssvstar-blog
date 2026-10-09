@@ -23,7 +23,7 @@ export function Toc({ headings }: { headings: Heading[] }) {
         if (first) setActiveId(first)
       },
       // 上面留出吸顶栏的高度，下面砍掉大半屏：只有进入上方区域的标题才算「当前」
-      { rootMargin: '-5rem 0px -70% 0px', threshold: 0 },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
     )
 
     elements.forEach((el) => observer.observe(el))
