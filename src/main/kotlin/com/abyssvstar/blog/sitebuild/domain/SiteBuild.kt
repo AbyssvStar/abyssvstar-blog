@@ -14,8 +14,8 @@ import java.time.Instant
  */
 @TableName("site_builds")
 data class SiteBuild(
-    @TableId(type = IdType.AUTO)
-    @TableField("id")
+    // 主键列名写在 @TableId 上：MyBatis-Plus 会忽略主键字段上的 @TableField，启动时还会打一条 WARN
+    @TableId(value = "id", type = IdType.AUTO)
     var id: Long? = null,
 
     /** 如 `post.published:123`，方便回溯是哪次操作引起的 */

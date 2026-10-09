@@ -10,8 +10,8 @@ import java.time.Instant
 /** 标签。新建走「保存文章时按名称自动创建」，不单独开接口。 */
 @TableName("tags")
 data class Tag(
-    @TableId(type = IdType.AUTO)
-    @TableField("id")
+    // 主键列名写在 @TableId 上：MyBatis-Plus 会忽略主键字段上的 @TableField，启动时还会打一条 WARN
+    @TableId(value = "id", type = IdType.AUTO)
     var id: Long? = null,
 
     @TableField("name")
