@@ -775,3 +775,71 @@ button.chip:disabled {
     transform: none;
   }
 }
+/* ---------- 设计细节：强调色只出现在结构性位置，不涂大片 ---------- */
+
+/* 小节标题前一根 accent 短竖条 */
+.section__title {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+}
+
+.section__title::before {
+  background: var(--accent);
+  content: '';
+  height: 0.85em;
+  width: 2px;
+}
+
+/* hero 标题上方的一小段 accent 短线，代替口号式的装饰 */
+.hero__mark {
+  background: var(--accent);
+  height: 2px;
+  margin-bottom: 1.4rem;
+  margin-top: 1.1rem;
+  width: 2.5rem;
+}
+
+/* 卡片与列表行：hover 时左侧亮起一条 accent 边 */
+.card,
+.list__item {
+  border-left: 2px solid transparent;
+}
+
+.card:hover,
+.list__item:hover {
+  border-left-color: var(--accent);
+}
+
+/* 关于页的信息网格：和首页卡片同一套发丝线语言 */
+.info-grid {
+  background: var(--border-soft);
+  border: 1px solid var(--border-soft);
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  margin: 2rem 0 2.25rem;
+}
+
+.info-cell {
+  background: var(--bg);
+  padding: 1.2rem 1.3rem 1.4rem;
+}
+
+.info-cell__label {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  margin-bottom: 0.7rem;
+  text-transform: uppercase;
+}
+
+.info-cell ul {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.8;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

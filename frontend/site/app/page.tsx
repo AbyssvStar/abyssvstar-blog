@@ -13,18 +13,20 @@ export default async function HomePage() {
   return (
     <>
       <section className="wrap hero">
-        <div className="kicker">{site.author}</div>
-        <h1 className="hero__title">
-          写代码，也写
-          <em>为什么</em>
-        </h1>
-        <p className="hero__desc">{site.description}</p>
+        <div className="kicker">{site.title}</div>
+        <div className="hero__mark" />
+        <h1 className="hero__title">{site.tagline}</h1>
+        <p className="hero__desc">{site.intro}</p>
 
         <div className="stats">
           <Stat num={stats.posts} label="篇文章" />
           <Stat num={formatWords(stats.words)} label="总字数" />
           <Stat num={stats.days} label="运行天数" />
         </div>
+
+        <p className="faint mono" style={{ fontSize: '0.72rem', marginTop: '1.4rem' }}>
+          最近更新 {latest[0] ? formatDate(latest[0].publishedAt) : '—'}
+        </p>
       </section>
 
       <section className="wrap section">

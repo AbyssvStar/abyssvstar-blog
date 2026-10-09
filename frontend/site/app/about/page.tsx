@@ -4,52 +4,67 @@ import { site } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: '关于',
-  description: '关于这个站点：写什么、怎么搭的、怎么联系。',
+  description: '关于我，以及这个站点。',
   alternates: { canonical: '/about/' },
 }
 
 export default function AboutPage() {
   return (
-    <div className="wrap" style={{ maxWidth: '44rem', padding: '3rem 0 4rem' }}>
-      <header style={{ marginBottom: '2rem' }}>
-        <div className="kicker">{site.author}</div>
+    <div className="wrap" style={{ maxWidth: '46rem', padding: '3rem 0 4rem' }}>
+      <header style={{ marginBottom: '1.6rem' }}>
+        <div className="kicker">About</div>
         <h1 style={{ fontSize: '1.9rem', marginTop: '0.6rem' }}>关于</h1>
       </header>
 
       {/*
-        个人简介留给你自己写：那种「热爱技术、持续学习」的模板句一眼就能看出来是生成的，
-        不如空着，或者写一句你自己觉得准确的话。
+        这段自我介绍请你自己改：我不编你的经历。
+        「写得不算多」是从项目定位里来的；其余两句如果不像你，直接删。
       */}
       <div className="md-body">
         <p>
-          这里是我自己写东西的地方：技术上的取舍、踩过的坑、以及一些还没想清楚的记录。
-          内容偏向「为什么这么写」，而不是「怎么写」——前者更难在别处找到。
+          我是 AbyssvStar。这里放我自己写的东西 —— 做过什么取舍、踩过什么坑、以及一些还没想清楚的记录。
+          写得不算多，都是自己趟过的。
         </p>
-
-        <h2>这个站是怎么搭的</h2>
-        <p>
-          后端是一个 Kotlin + Spring Boot 的单体应用，内容存在 PostgreSQL 里：编辑中的稿子和发布快照分成两张表，
-          只有点过「发布」的内容才会出现在这里。图片放在自建的 MinIO，不占应用服务器的磁盘。
-        </p>
-        <p>
-          你看到的这些页面是纯静态 HTML —— 发布之后由 GitHub Actions 构建，Nginx 直接发文件。
-          所以后端重启、升级、甚至挂掉，文章照样能打开。检索交给 Elasticsearch，它不可用时会自动降级到 PostgreSQL。
-        </p>
-
-        <h2>联系</h2>
-        <ul>
-          <li>
-            代码仓库：<a href={site.repo} rel="noreferrer" target="_blank">GitHub</a>
-          </li>
-          <li>
-            订阅：<a href="/rss.xml">RSS</a>（全文输出，不是摘要）
-          </li>
-        </ul>
       </div>
 
-      <div className="rule" style={{ margin: '2.5rem 0 1.25rem' }} />
-      <p className="faint mono" style={{ fontSize: '0.72rem' }}>
-        没有评论系统，也不打算加追踪脚本。<Link href="/posts/">去看文章</Link>。
+      <div className="info-grid">
+        <div className="info-cell">
+          <div className="info-cell__label">在这里能读到</div>
+          <ul>
+            <li>技术笔记与工程取舍</li>
+            <li>踩坑与排查过程</li>
+            <li>随手记录（短动态）</li>
+          </ul>
+        </div>
+        <div className="info-cell">
+          <div className="info-cell__label">这个站</div>
+          <ul>
+            <li>发布即生成静态页面</li>
+            <li>后端挂了也读得到</li>
+            <li>
+              怎么搭的会单独写一篇{/* TODO：那篇文章发出来后，把这里换成链接 */}
+              <span className="faint">（待补）</span>
+            </li>
+          </ul>
+        </div>
+        <div className="info-cell">
+          <div className="info-cell__label">联系 / 订阅</div>
+          <ul>
+            <li>
+              <a href={site.repo} rel="noreferrer" target="_blank">
+                GitHub
+              </a>
+            </li>
+            <li>
+              <a href="/rss.xml">RSS</a>
+              <span className="faint"> · 全文输出</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <p className="muted" style={{ fontSize: '0.9rem' }}>
+        没有评论系统，也不加追踪脚本。想看内容就<Link href="/posts/">去文章列表</Link>。
       </p>
     </div>
   )
