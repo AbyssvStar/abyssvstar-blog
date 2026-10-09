@@ -3,6 +3,7 @@ package com.abyssvstar.blog.post.domain
 import com.abyssvstar.blog.shared.persistence.JsonbTypeHandler
 import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.FieldStrategy
+import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
 import com.baomidou.mybatisplus.annotation.TableName
@@ -16,8 +17,7 @@ import java.time.Instant
  */
 @TableName(value = "post_publications", autoResultMap = true)
 data class PostPublication(
-    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.INPUT)
-    @TableField("post_id")
+    @TableId(value = "post_id", type = IdType.INPUT)
     var postId: Long? = null,
 
     @TableField("slug")
