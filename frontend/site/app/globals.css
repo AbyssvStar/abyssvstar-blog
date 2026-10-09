@@ -4,39 +4,44 @@
  * 设计令牌。配色沿用 docs/07 定的那套，这里只是补全到够用的程度：
  * 一个冷色强调（--accent），其余全靠灰阶 + 发丝线分层，不做渐变按钮、不做投影。
  */
-:root,
-:root[data-theme='dark'] {
-  --bg: #0a0a0b;
-  --bg-elevated: #141416;
-  --border: #26262b;
-  --border-soft: rgba(255, 255, 255, 0.07);
-  --text: #e8e8ea;
-  --text-muted: #9a9aa3;
-  --text-faint: #6d6d77;
-  --accent: #6ea8fe;
-  --accent-soft: rgba(110, 168, 254, 0.13);
-  --accent-glow: rgba(110, 168, 254, 0.4);
-  --code-bg: #101013;
-  --grid: rgba(255, 255, 255, 0.03);
-  --star: rgba(255, 255, 255, 0.55);
+/*
+ * 颜色用 light-dark() 写一份，取哪一侧由 color-scheme 决定：
+ *  - 没设置 data-theme 时跟随系统（@media prefers-color-scheme）
+ *  - 顶栏的开关显式写 data-theme，覆盖系统
+ *
+ * 这样就不用在 <head> 里塞阻塞内联脚本：React 会拒绝渲染裸 <script>，
+ * 而 Next 的 beforeInteractive 在静态导出下也只是排队给运行时执行，起不到防闪作用。
+ */
+:root {
   color-scheme: dark;
+
+  --bg: light-dark(#ffffff, #0a0a0b);
+  --bg-elevated: light-dark(#f7f7f8, #141416);
+  --border: light-dark(#e5e5e8, #26262b);
+  --border-soft: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.07));
+  --text: light-dark(#18181b, #e8e8ea);
+  --text-muted: light-dark(#6b6b73, #9a9aa3);
+  --text-faint: light-dark(#90909a, #6d6d77);
+  --accent: light-dark(#2563eb, #6ea8fe);
+  --accent-soft: light-dark(rgba(37, 99, 235, 0.1), rgba(110, 168, 254, 0.13));
+  --accent-glow: light-dark(rgba(37, 99, 235, 0.22), rgba(110, 168, 254, 0.4));
+  --code-bg: light-dark(#f6f7f9, #101013);
+  --grid: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.03));
+  --star: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.55));
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+  }
 }
 
 :root[data-theme='light'] {
-  --bg: #ffffff;
-  --bg-elevated: #f7f7f8;
-  --border: #e5e5e8;
-  --border-soft: rgba(0, 0, 0, 0.08);
-  --text: #18181b;
-  --text-muted: #6b6b73;
-  --text-faint: #90909a;
-  --accent: #2563eb;
-  --accent-soft: rgba(37, 99, 235, 0.1);
-  --accent-glow: rgba(37, 99, 235, 0.22);
-  --code-bg: #f6f7f9;
-  --grid: rgba(0, 0, 0, 0.04);
-  --star: rgba(0, 0, 0, 0.4);
   color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 :root {
@@ -646,14 +651,21 @@ button.chip:disabled {
   background: none !important;
 }
 
-/* Shiki 双主题：暗色下取 --shiki-dark，亮色下取 --shiki-light */
+/* Shiki 双主题：取哪一侧跟上面同一套判断 */
 .md-body pre.shiki,
 .md-body pre.shiki span {
   color: var(--shiki-light);
 }
 
-html[data-theme='dark'] .md-body pre.shiki,
-html[data-theme='dark'] .md-body pre.shiki span {
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .md-body pre.shiki,
+  :root:not([data-theme='light']) .md-body pre.shiki span {
+    color: var(--shiki-dark);
+  }
+}
+
+:root[data-theme='dark'] .md-body pre.shiki,
+:root[data-theme='dark'] .md-body pre.shiki span {
   color: var(--shiki-dark);
 }
 
