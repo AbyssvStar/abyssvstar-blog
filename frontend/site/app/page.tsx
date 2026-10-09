@@ -57,17 +57,20 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* 这里不写「站是怎么搭的」：那是文章的内容，等写出来再链过去（关于页里留了位置） */}
       <section className="wrap section">
         <div className="section__head">
-          <div className="section__title">这个站</div>
+          <div className="section__title">入口</div>
         </div>
-        <p className="muted" style={{ maxWidth: '38rem', fontSize: '0.95rem' }}>
-          内容存在 PostgreSQL 的发布快照里，改完点发布，由 GitHub Actions 构建成纯静态页面，
-          Nginx 直接发文件 —— 后端挂了，文章照样有人能读到。检索走 Elasticsearch，挂了自动降级到 PG。
-        </p>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1.1rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <Link href="/posts/" className="chip">
+            全部文章
+          </Link>
+          <Link href="/archive/" className="chip">
+            归档
+          </Link>
           <Link href="/about/" className="chip">
-            关于这个站
+            关于
           </Link>
           <a href="/rss.xml" className="chip">
             RSS
