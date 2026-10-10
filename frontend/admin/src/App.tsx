@@ -4,6 +4,7 @@ import type { Me } from './api/types'
 import { LoginPage } from './pages/LoginPage'
 import { PostListPage } from './pages/PostListPage'
 import { EditorPage } from './pages/EditorPage'
+import { SiteConfigPage } from './pages/SiteConfigPage'
 import { applyTheme, currentTheme, type Theme } from './theme'
 
 export function App() {
@@ -60,7 +61,8 @@ export function App() {
 
 function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
   const [busy, setBusy] = useState(false)
-  // 只有两个页面，用状态做路由就够了。页面多起来再引 react-router
+  // 页面就三个，用状态做路由就够了。再多起来就该引 react-router 了
+  const [view, setView] = useState<'posts' | 'site'>('posts')
   const [editingId, setEditingId] = useState<number | null>(null)
 
   async function logout() {
@@ -85,18 +87,30 @@ function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
         </div>
         <nav className="nav">
           <button
-            className={`nav__item${editingId === null ? ' nav__item--active' : ''}`}
-            onClick={() => setEditingId(null)}
+            className={`nav__item${view === 'posts' ? ' nav__item--active' : ''}`}
+            onClick={() => {
+              setView('posts')
+              setEditingId(null)
+            }}
           >
             文章
           </button>
           {editingId !== null && <span className="nav__item nav__item--active">编辑中</span>}
+          <button
+            className={`nav__item${view === 'site' ? ' nav__item--active' : ''}`}
+            onClick={() => {
+              setView('site')
+              setEditingId(null)
+            }}
+          >
+            站点
+          </button>
         </nav>
       </aside>
 
       <div className="main">
         <header className="topbar">
-          <span className="topbar__title">{editingId === null ? '文章' : '编辑文章'}</span>
+          <span className="topbar__title">{editingId !== null ? '编辑文章' : view === 'site' ? '站点' : '文章'}</span>
           <div className="topbar__right">
             <ThemeToggle />
             <span className="muted" style={{ fontSize: 13 }}>
@@ -109,10 +123,12 @@ function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
         </header>
 
         <div className="content">
-          {editingId === null ? (
-            <PostListPage onUnauthenticated={onLoggedOut} onOpen={setEditingId} />
-          ) : (
+          {editingId !== null ? (
             <EditorPage postId={editingId} onBack={() => setEditingId(null)} />
+          ) : view === 'site' ? (
+            <SiteConfigPage />
+          ) : (
+            <PostListPage onUnauthenticated={onLoggedOut} onOpen={setEditingId} />
           )}
         </div>
       </div>

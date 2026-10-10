@@ -31,7 +31,7 @@
 /posts                  文章列表（分页 + 标签筛选）
 /posts/[slug]           文章详情
 /archive                时间归档（按年月）
-/about                  关于
+/about                  关于（正文来自后台的站点配置，Markdown 编辑、保存即重建）
 /search                 搜索
 /notes                  短动态列表（**存在，但不进一级导航**）
 /notes/[id]             单条动态详情

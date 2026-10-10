@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { loadContent, getPosts, getStats } from '@/lib/content'
+import { loadContent, getPosts, getSiteConfig, getStats } from '@/lib/content'
 import { formatDate } from '@/lib/format'
 import { site } from '@/lib/site'
 import { EmptyState, PostGrid } from '@/components/PostList'
@@ -11,7 +11,13 @@ import { HeroTitle } from '@/components/HeroTitle'
 
 
 export default async function HomePage() {
-  const [posts, stats, content] = await Promise.all([getPosts(), getStats(), loadContent()])
+  // loadContent 与 getSiteConfig 共用同一次导出请求（lib/content.ts 里做了缓存），不会多拉一次
+  const [posts, stats, content, config] = await Promise.all([
+    getPosts(),
+    getStats(),
+    loadContent(),
+    getSiteConfig(),
+  ])
   const latest = posts.slice(0, 6)
   const notes = content.notes.slice(0, 4)
 
@@ -26,7 +32,7 @@ export default async function HomePage() {
         <GalaxyBackground />
         <div className="hero-stage__inner">
           <div className="hero__mark" />
-          <HeroTitle text={site.title} />
+          <HeroTitle text={config.title} />
           <p className="hero-stage__sub">{site.intro}</p>
           <div className="stats">
             <Stat num={stats.posts} label="篇文章" />

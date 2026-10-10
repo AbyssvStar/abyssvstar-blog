@@ -111,6 +111,26 @@ export interface SlugSuggestResponse {
 
 export type BuildStatus = 'PENDING' | 'FIRED' | 'FAILED' | 'CANCELLED'
 
+/**
+ * 站点配置。关于页正文给的是 Markdown 原文 —— 编辑器要改的就是它。
+ *
+ * 站名、简介、关于页正文是同一类东西：作者手写、改完要重建站。导航、许可、
+ * 背景图那些仍然在公开站的代码里（改了要连着改模板），不搬进来。
+ */
+export interface SiteConfig {
+  title: string
+  description: string
+  aboutMarkdown: string
+  updatedAt?: string
+}
+
+/** PUT /site-config 的请求体。保存就是上线动作，没有单独的「发布」。 */
+export interface UpdateSiteConfigBody {
+  title: string
+  description: string
+  aboutMarkdown: string
+}
+
 /** 一条静态站构建记录 */
 export interface SiteBuildInfo {
   id: number

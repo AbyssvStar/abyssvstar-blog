@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { site } from '@/lib/site'
+import { getSiteConfig } from '@/lib/content'
 import { SiteHeader } from '@/components/SiteHeader'
 import { SiteFooter } from '@/components/SiteFooter'
 
@@ -11,29 +12,34 @@ import { PointerGlow } from '@/components/PointerGlow'
 import { ClickBurst } from '@/components/ClickBurst'
 
 
-export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
-  title: {
-    default: site.title + "'s blog",
-    template: `%s · ${site.title}`,
-  },
-  description: site.description,
-  authors: [{ name: site.author }],
-  alternates: {
-    canonical: '/',
-    types: { 'application/rss+xml': '/rss.xml' },
-  },
-  openGraph: {
-    type: 'website',
-    siteName: site.title,
-    title: site.title,
-    description: site.description,
-    locale: 'zh_CN',
-  },
+/** 站名与简介来自后台的站点配置；构建时取一次，和页面内容来自同一份导出 */
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getSiteConfig()
+  return {
+    metadataBase: new URL(site.url),
+    title: {
+      default: config.title + "'s blog",
+      template: `%s · ${config.title}`,
+    },
+    description: config.description,
+    authors: [{ name: site.author }],
+    alternates: {
+      canonical: '/',
+      types: { 'application/rss+xml': '/rss.xml' },
+    },
+    openGraph: {
+      type: 'website',
+      siteName: config.title,
+      title: config.title,
+      description: config.description,
+      locale: 'zh_CN',
+    },
+  }
 }
 
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const config = await getSiteConfig()
   // 主题不靠脚本抢跑：没写 data-theme 就跟随系统偏好，写了就照写的来（见 globals.css 的令牌一节）
   return (
     <html lang="zh-CN" suppressHydrationWarning>
@@ -56,9 +62,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PointerGlow />
         <ClickBurst />
         <ParticlesBackground />
-        <SiteHeader />
+        <SiteHeader title={config.title} />
         <main>{children}</main>
-        <SiteFooter />
+        <SiteFooter title={config.title} description={config.description} />
       </body>
     </html>
   )
