@@ -9,6 +9,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@tsparticles/engine": "^4.4.0",
+    "@tsparticles/interaction-particles-repulse": "^4.4.0",
+    "@tsparticles/react": "^4.4.0",
+    "@tsparticles/slim": "^4.4.0",
     "next": "^16.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
