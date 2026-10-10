@@ -1,4 +1,8 @@
 import type { Metadata } from 'next'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { transformPostHtml } from '@/lib/markdown'
+import { CodeCopy } from '@/components/CodeCopy'
 import { site } from '@/lib/site'
 
 export const metadata: Metadata = {
@@ -8,14 +12,37 @@ export const metadata: Metadata = {
 }
 
 /**
- * 关于页留空：这段内容你自己写，我不代笔。
- * 想加什么直接写在下面（正文样式可以套 `md-body` 这个 class，和文章页一致）。
- * 要不要保留「联系 / 订阅」那类区块，也由你定。
+ * 关于页的正文来自 `frontend/site/content/about.md`。
+ *
+ * 为什么先做成文件：改一个文件、重新构建就有新页面，零后端改动。
+ * 文档里本来就把「关于页」算作站点内容（后台的 site-config 接口，
+ * 在 API 契约里标着待做），等 G3 那条接口做出来，这里换成读导出内容即可 —— 页面结构不用动。
  */
-export default function AboutPage() {
+function loadAbout(): string {
+  try {
+    return readFileSync(join(process.cwd(), 'content', 'about.md'), 'utf8')
+  } catch {
+    return ''
+  }
+}
+
+export default async function AboutPage() {
+  const source = loadAbout()
+  // 正文里已经有 H1 就不再补一个，免得出现两个标题
+  const hasOwnTitle = /^#\s+/m.test(source)
+  const { html } = source.trim() ? await transformPostHtml(source) : { html: '' }
+
   return (
-    <div className="wrap" style={{ maxWidth: '44rem', padding: '3rem 0 4rem' }}>
-      <h1 style={{ fontSize: '1.9rem' }}>关于</h1>
+    <div className="wrap" style={{ maxWidth: '46rem', padding: '3rem 0 4rem' }}>
+      {!hasOwnTitle && <h1 style={{ fontSize: '1.9rem' }}>关于</h1>}
+      {html ? (
+        <>
+          <div className="md-body" id="about-body" dangerouslySetInnerHTML={{ __html: html }} />
+          <CodeCopy containerId="about-body" />
+        </>
+      ) : (
+        <p className="faint">content/about.md 还是空的。</p>
+      )}
     </div>
   )
 }
