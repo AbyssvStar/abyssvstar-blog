@@ -28,5 +28,10 @@ export function ReadingProgress() {
     }
   }, [])
 
-  return <div className="progress" style={{ width: `${percent}%` }} aria-hidden="true" />
+  return (
+    <div className="progress" aria-hidden="true">
+      <div className="progress__bar" style={{ width: `${percent}%` }} />
+      <div className="progress__mark" style={{ left: `${percent}%` }} />
+    </div>
+  )
 }

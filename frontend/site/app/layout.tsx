@@ -5,13 +5,16 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { SiteFooter } from '@/components/SiteFooter'
 
 import { ParticlesBackground } from '@/components/ParticlesBackground'
+
+
 import { PointerGlow } from '@/components/PointerGlow'
+import { ClickBurst } from '@/components/ClickBurst'
 
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: site.title,
+    default: site.title + "'s blog",
     template: `%s · ${site.title}`,
   },
   description: site.description,
@@ -49,7 +52,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
 
 
+
         <PointerGlow />
+        <ClickBurst />
         <ParticlesBackground />
         <SiteHeader />
         <main>{children}</main>
