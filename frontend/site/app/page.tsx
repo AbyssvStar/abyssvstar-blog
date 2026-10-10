@@ -5,7 +5,9 @@ import { site } from '@/lib/site'
 import { EmptyState, PostGrid } from '@/components/PostList'
 
 import { Reveal } from '@/components/Reveal'
+
 import { GalaxyBackground } from '@/components/GalaxyBackground'
+import { HeroTitle } from '@/components/HeroTitle'
 
 
 export default async function HomePage() {
@@ -25,7 +27,7 @@ export default async function HomePage() {
         <GalaxyBackground />
         <div className="hero-stage__inner">
           <div className="hero__mark" />
-          <h1 className="hero-stage__title">{site.title}</h1>
+          <HeroTitle text={site.title} />
           <p className="hero-stage__sub">{site.intro}</p>
           <div className="stats">
             <Stat num={stats.posts} label="篇文章" />
