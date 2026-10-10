@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ExportPost } from '@/lib/content'
 import { PAGE_SIZE } from '@/lib/site'
-import { EmptyState, PostGrid } from '@/components/PostList'
+import { EmptyState, PostCardWide } from '@/components/PostList'
 
 /**
  * 列表页的交互：标签筛选 + 翻页。
@@ -70,7 +70,7 @@ export function PostsBrowser({ posts, tags }: { posts: ExportPost[]; tags: strin
       {slice.length === 0 ? (
         <EmptyState text={tag ? `没有标着「${tag}」的文章。` : '这里还没有文章。'} />
       ) : (
-        <PostGrid posts={slice} />
+        <PostCardWide posts={slice} />
       )}
 
       {totalPages > 1 && (

@@ -40,34 +40,56 @@ export default async function HomePage() {
       </section>
 
 
-      {/*
-        这里原来有个侧栏，放的全是"上面和下面都有的东西"（导航、标签），确实是填充物 —— 删掉。
-        卡片网格本身满宽铺开就不空，不够的用一行入口补上。
-      */}
       <section className="wrap section">
-        <div className="section__head">
-          <div className="section__title">最新文章</div>
-          <Link href="/posts/" className="mono faint" style={{ fontSize: '0.76rem' }}>
-            全部文章 →
-          </Link>
-        </div>
-        <Reveal>{latest.length > 0 ? <PostGrid posts={latest} /> : <EmptyState text="还没有发布任何文章。" />}</Reveal>
+        <div className="home-cols">
+          <div>
+            <div className="section__head">
+              <div className="section__title">最新文章</div>
+              <Link href="/posts/" className="mono faint" style={{ fontSize: '0.76rem' }}>
+                全部文章 →
+              </Link>
+            </div>
+            <Reveal>{latest.length > 0 ? <PostGrid posts={latest} /> : <EmptyState text="还没有发布任何文章。" />}</Reveal>
+          </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1.5rem' }}>
-          {latest[0] && (
-            <Link href={`/posts/${latest[0].slug}/`} className="chip">
-              最新文章
-            </Link>
-          )}
-          <Link href="/archive/" className="chip">
-            归档
-          </Link>
-          <Link href="/about/" className="chip">
-            关于
-          </Link>
-          <a href={site.repo} className="chip" rel="noreferrer" target="_blank">
-            GitHub
-          </a>
+          <aside className="home-side">
+
+            <div className="info-cell">
+              <div className="info-cell__label">最近动态</div>
+              {content.notes.length > 0 ? (
+                // 用 details/summary 做"点开"，横向可滑 —— 都不需要 JS
+                <div className="notes-strip">
+                  {content.notes.slice(0, 6).map((note) => (
+                    <details key={note.id} className="note">
+                      <summary>{formatDate(note.publishedAt)}</summary>
+                      <p>{note.content}</p>
+                    </details>
+                  ))}
+                </div>
+              ) : (
+                <p className="faint" style={{ fontSize: '0.85rem', margin: 0 }}>
+                  还没有短动态。
+                </p>
+              )}
+            </div>
+
+            <div className="info-cell">
+              <div className="info-cell__label">标签</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {content.tags.slice(0, 24).map((tag) => (
+                  // 用得越多字号越大
+                  <Link
+                    key={tag.slug}
+                    href={`/posts/?tag=${encodeURIComponent(tag.name)}`}
+                    className="chip"
+                    style={{ fontSize: `${(0.78 + Math.min(tag.count, 10) * 0.17).toFixed(2)}rem` }}
+                  >
+                    {tag.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </aside>
         </div>
       </section>
 

@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import type { ExportPost } from '@/lib/content'
 import { formatDate } from '@/lib/format'
+
 import { Tilt } from '@/components/Tilt'
+import { ScrollZoom } from '@/components/ScrollZoom'
 
 /** 首页用：网格卡片。靠 1px 间隙露出底色形成发丝线，不用阴影和大圆角 */
 export function PostGrid({ posts }: { posts: ExportPost[] }) {
@@ -23,6 +25,38 @@ export function PostGrid({ posts }: { posts: ExportPost[] }) {
           <p className="card__summary">{post.summary}</p>
           <TagChips tags={post.tags} />
         </Tilt>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * 一行的大卡片：左边封面（随滚动轻微位移），右边标题 / 简介 / 标签。
+ * 整卡可点（标题是链接，它的 ::after 铺满卡片），标签仍能单独点。
+ */
+export function PostCardWide({ posts }: { posts: ExportPost[] }) {
+  return (
+    <div className="wide-cards">
+      {posts.map((post) => (
+        <div key={post.slug} className="wide-card">
+          {post.coverUrl ? (
+            <ScrollZoom>
+              <img src={post.coverUrl} alt="" loading="lazy" decoding="async" />
+            </ScrollZoom>
+          ) : (
+            <span className="wide-card__blank" />
+          )}
+          <div className="wide-card__body">
+            <div className="mono faint" style={{ fontSize: '0.72rem' }}>
+              {formatDate(post.publishedAt)} · {post.readingMinutes} 分钟
+            </div>
+            <Link href={`/posts/${post.slug}/`} className="wide-card__title card__link">
+              {post.title}
+            </Link>
+            <p className="card__summary">{post.summary}</p>
+            <TagChips tags={post.tags} />
+          </div>
+        </div>
       ))}
     </div>
   )
