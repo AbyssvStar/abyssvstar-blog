@@ -15,7 +15,9 @@ export async function PostsView() {
       <header style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.8rem' }}>文章</h1>
       </header>
-      <PostsBrowser posts={posts} tags={tagsByCount(tags).map((tag) => tag.name)} />
+      <div className="list-panel">
+        <PostsBrowser posts={posts} tags={tagsByCount(tags).map((tag) => tag.name)} />
+      </div>
     </div>
   )
 }
