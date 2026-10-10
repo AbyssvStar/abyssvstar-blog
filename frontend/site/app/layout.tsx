@@ -3,7 +3,9 @@ import './globals.css'
 import { site } from '@/lib/site'
 import { SiteHeader } from '@/components/SiteHeader'
 import { SiteFooter } from '@/components/SiteFooter'
+
 import { ParticlesBackground } from '@/components/ParticlesBackground'
+import { PointerGlow } from '@/components/PointerGlow'
 
 
 export const metadata: Metadata = {
@@ -46,6 +48,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="backdrop__glow" />
         </div>
 
+
+        <PointerGlow />
         <ParticlesBackground />
         <SiteHeader />
         <main>{children}</main>
