@@ -63,7 +63,10 @@ html {
 }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
+  /* 极淡的一层层次：整块同色会显得寡淡 */
+  background-image: radial-gradient(90rem 40rem at 12% -10%, var(--accent-soft), transparent 60%),
+    radial-gradient(70rem 34rem at 105% 8%, var(--accent-soft), transparent 62%);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 16px;
@@ -148,7 +151,7 @@ a {
   filter: blur(14px);
   height: 30rem;
   left: 50%;
-  opacity: 0.25;
+  opacity: 0.42;
   position: absolute;
   top: -13rem;
   transform: translateX(-50%);
@@ -1180,8 +1183,12 @@ button.chip:disabled {
   display: flex;
   height: calc(100svh - 3.75rem);
   justify-content: center;
-  overflow: hidden;
   position: relative;
+}
+
+/* 标题要做"缩小飞向右上角"，所以它不能是被裁的静态元素 */
+.hero-stage__title {
+  will-change: transform, opacity;
 }
 
 /* 三块画布：id 那块是常驻星野，两个 .galaxy 是拖动出来的星系（尘埃层 + 星层）。
@@ -1228,4 +1235,31 @@ button.chip:disabled {
   .galaxy {
     display: none;
   }
+}
+/* ---------- 鼠标下的柔光 ---------- */
+.pointer-glow {
+  background: radial-gradient(closest-side, var(--accent-soft), transparent 72%);
+  filter: blur(8px);
+  height: 680px;
+  left: 0;
+  opacity: 0.75;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 680px;
+  will-change: transform;
+  /* 压在最底下：它给背景"打光"，不该盖在文字上 */
+  z-index: -1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pointer-glow {
+    display: none;
+  }
+}
+
+/* 浅色主题下，screen 混合在白底上等于什么都不显示 —— 换成正常混合，星点才看得见 */
+:root[data-theme='light'] #star-bg,
+:root[data-theme='light'] .galaxy {
+  mix-blend-mode: normal;
 }

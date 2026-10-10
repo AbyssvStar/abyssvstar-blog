@@ -34,6 +34,9 @@ interface Orbit {
   angle: number
   distance: number
   texture?: HTMLCanvasElement
+  /** 尘粒的出生时间与寿命：没有寿命的话，笔迹上会一直叠、糊成一片 */
+  born?: number
+  life?: number
 }
 
 interface Galaxy {
@@ -61,16 +64,17 @@ export function GalaxyBackground() {
   const paintRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const starCanvas = starRef.current
+    // 三个引用各归各位：#star-bg 画星野，两个 .galaxy 画拖动出来的星系
+    const warpCanvas = paintRef.current
     const dustCanvas = dustRef.current
-    const paintCanvas = paintRef.current
-    if (!starCanvas || !dustCanvas || !paintCanvas) return
+    const starCanvas = starRef.current
+    if (!warpCanvas || !dustCanvas || !starCanvas) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-    const starCtx = starCanvas.getContext('2d')
+    const warpCtx = warpCanvas.getContext('2d')
     const dustCtx = dustCanvas.getContext('2d')
-    const paintCtx = paintCanvas.getContext('2d')
-    if (!starCtx || !dustCtx || !paintCtx) return
+    const starCtx = starCanvas.getContext('2d')
+    if (!warpCtx || !dustCtx || !starCtx) return
 
     const colors = readTokens()
     const toRgb = (hex: string): string => {
@@ -105,11 +109,11 @@ export function GalaxyBackground() {
     })
 
     const resizeStarry = () => {
-      starCanvas.width = starCanvas.clientWidth
-      starCanvas.height = starCanvas.clientHeight
-      starCanvas.style.backgroundColor = colors.page
-      width = starCanvas.clientWidth
-      height = starCanvas.clientHeight
+      warpCtx.clearRect(0, 0, warpCanvas.width, warpCanvas.height)
+      warpCanvas.width = warpCanvas.clientWidth
+      warpCanvas.height = warpCanvas.clientHeight
+      width = warpCanvas.clientWidth
+      height = warpCanvas.clientHeight
       focalDistance = width * focalDistanceLevel
       const count = Math.ceil(width * starCountLevel)
       if (starList.length > count) {
@@ -128,7 +132,7 @@ export function GalaxyBackground() {
       lastStarDraw = now
       starFrame = (starFrame + 1) % 2
 
-      starCtx.clearRect(0, 0, width, height)
+      warpCtx.clearRect(0, 0, width, height)
       const starSpeed = width * focalDistanceLevel * starSpeedLevel
       for (const star of starList) {
         const starX = ((star.x - width / 2) * (focalDistance / star.z)) + width / 2
@@ -145,14 +149,14 @@ export function GalaxyBackground() {
           const radius = starRadius * ((focalDistance / star.z) * 0.8)
           const opacity = 1 - 0.8 * (star.z / focalDistance)
           const color = starColorList()[star.color]
-          starCtx.fillStyle = withAlpha(color, opacity)
-          starCtx.shadowOffsetX = 0
-          starCtx.shadowOffsetY = 0
-          starCtx.shadowColor = color
-          starCtx.shadowBlur = 10
-          starCtx.beginPath()
-          starCtx.arc(starX, starY, radius, 0, TAU)
-          starCtx.fill()
+          warpCtx.fillStyle = withAlpha(color, opacity)
+          warpCtx.shadowOffsetX = 0
+          warpCtx.shadowOffsetY = 0
+          warpCtx.shadowColor = color
+          warpCtx.shadowBlur = 10
+          warpCtx.beginPath()
+          warpCtx.arc(starX, starY, radius, 0, TAU)
+          warpCtx.fill()
         } else {
           star.x = width * (0.1 + 0.8 * random())
           star.y = height * (0.1 + 0.8 * random())
@@ -197,8 +201,11 @@ export function GalaxyBackground() {
         }
       }
       sizeCanvas()
-      ctxDust.globalCompositeOperation = 'lighter'
-      ctxStar.globalCompositeOperation = 'lighter'
+      // 两层都用普通混合：加色混合（lighter）在这套画法里会出事 ——
+      // 尘粒全生成在星系质心附近，一堆柔光叠加就在中心烧出一块白。
+      // 柔和感靠尘粒自身的低透明度与拖尾（擦除式）来给，不靠加色。
+      ctxDust.globalCompositeOperation = 'source-over'
+      ctxStar.globalCompositeOperation = 'source-over'
 
       const galaxies: Galaxy[] = []
       const mouse = { pos: { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5 }, speed: 0 }
@@ -238,30 +245,25 @@ export function GalaxyBackground() {
         distance: 0,
       })
 
-      /** 尘粒纹理：参考实现这里用了个未定义的 length（算出来是 NaN，实际画不出东西），
-       *  按它的本意补成 200，尘粒才会真的出现。 */
+      /**
+       * 一团柔光的贴图。
+       *
+       * 参考实现用的是"200 个小点绕成螺旋"再放大到上百像素 —— 那玩意儿一多就结成一块，
+       * 这就是"一片一片"的根源。换成单张径向渐变：一团真正的柔光，叠加时也是平滑过渡。
+       */
       const createDustParticle = (): HTMLCanvasElement => {
+        const size = 48
         const canvas = document.createElement('canvas')
-        const cx = 50
-        const cy = 50
-        canvas.width = 100
-        canvas.height = 100
+        canvas.width = size
+        canvas.height = size
         const ctx = canvas.getContext('2d')
         if (!ctx) return canvas
-        ctx.fillStyle = withAlpha(colors.cyan, 0.08)
-        const spreadX = -5 + random() * 10
-        const spreadY = -5 + random() * 10
-        const rangeX = 10 + random() * (cx / 2)
-        const rangeY = 10 + random() * (cy / 2)
-        const STEPS = 200
-        for (let index = 0; index < STEPS; index++) {
-          const seed = random()
-          const x = Math.cos((TAU / spreadX / STEPS) * index) * seed * rangeX + cx
-          const y = Math.sin((TAU / spreadY / STEPS) * index) * seed * rangeY + cy
-          ctx.beginPath()
-          ctx.arc(x, y, seed * 4, 0, TAU)
-          ctx.fill()
-        }
+        const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+        gradient.addColorStop(0, withAlpha(colors.cyan, 0.55))
+        gradient.addColorStop(0.4, withAlpha(colors.ocean, 0.18))
+        gradient.addColorStop(1, withAlpha(colors.ocean, 0))
+        ctx.fillStyle = gradient
+        ctx.fillRect(0, 0, size, size)
         return canvas
       }
 
@@ -273,6 +275,9 @@ export function GalaxyBackground() {
         texture: createDustParticle(),
         angle: 0,
         distance: 0,
+        born: performance.now(),
+        // 寿命 8–10 秒；其中 20% 不给寿命 = 永不回收（永久星云，靠上面的 MAX_DUST 兜底）
+        life: random() < 0.2 ? undefined : 8000 + random() * 2000,
       })
 
       const calculateCenter = (g: Galaxy) => {
@@ -302,20 +307,26 @@ export function GalaxyBackground() {
             }
           }
           g.stars.forEach((s) => updateOrbit(s, g))
+          const now = performance.now()
+          // life 为空 = 永久尘粒，不回收
+          g.dust = g.dust.filter((d) => d.life === undefined || now - (d.born ?? now) < d.life)
           g.dust.forEach((d) => updateOrbit(d, g))
         })
       }
 
       const render = () => {
-        // 尘埃层用低透明度底色反复覆盖 = 拖尾
-        ctxDust.globalCompositeOperation = 'source-over'
-        ctxDust.fillStyle = withAlpha(colors.page, 0.08)
+        // 拖尾用"擦除"实现：每帧抹掉 22% 已有像素。
+        // 参考实现是往上涂低透明度底色 —— 在深色底上会留下洗不掉的脏印，也盖住了星野。
+        ctxDust.globalCompositeOperation = 'destination-out'
+        ctxDust.fillStyle = 'rgba(0, 0, 0, 0.22)'
         ctxDust.fillRect(0, 0, dustCanvas!.width, dustCanvas!.height)
-        ctxDust.globalCompositeOperation = 'lighter'
+        ctxDust.globalCompositeOperation = 'source-over'
 
         ctxStar.clearRect(0, 0, starCanvas!.width, starCanvas!.height)
-        ctxStar.fillStyle = colors.ocean
-        ctxStar.strokeStyle = withAlpha(colors.sky, 0.12)
+        // 半透明 + shadowBlur 归零：不然（尤其叠加 lighter 时）光点会晃眼
+        ctxStar.shadowBlur = 0
+        ctxStar.fillStyle = withAlpha(colors.ocean, 0.72)
+        ctxStar.strokeStyle = withAlpha(colors.sky, 0.1)
         ctxStar.beginPath()
 
         if (drawingMode) {
@@ -330,11 +341,16 @@ export function GalaxyBackground() {
             ctxStar.moveTo(s.x, s.y)
             ctxStar.arc(s.x, s.y, s.radius ?? 1, 0, TAU)
           })
+          // 尘粒：按剩余寿命淡出，所以笔迹后面是一层会自己散掉的薄雾
+          const now = performance.now()
           g.dust.forEach((d) => {
-            if (d.texture && d.size) {
-              ctxDust.drawImage(d.texture, d.x - d.size * 0.5, d.y - d.size * 0.5, d.size, d.size)
-            }
+            if (!d.texture || !d.size || d.born === undefined) return
+            const fade = d.life === undefined ? 0.85 : 1 - (now - d.born) / d.life
+            if (fade <= 0.02) return
+            ctxDust.globalAlpha = fade * 0.5
+            ctxDust.drawImage(d.texture, d.x - d.size / 2, d.y - d.size / 2, d.size, d.size)
           })
+          ctxDust.globalAlpha = 1
         })
 
         ctxDust.fill()
@@ -351,19 +367,23 @@ export function GalaxyBackground() {
         }
       }
 
+      // 每个星系的上限：画很多笔之后不至于糊成一片
+      const MAX_STARS = 420
+      // 有 20% 永久尘粒，上限给大一些，够铺出星云又不至于糊
+      const MAX_DUST = 360
+
       const draw = () => {
         if (!drawingMode || !currentGalaxy) return
-        currentGalaxy.stars.push(newStar(mouse.pos.x, mouse.pos.y, mouse.speed))
-        currentGalaxy.stars.push(newStar(mouse.pos.x, mouse.pos.y, mouse.speed))
-        currentGalaxy.stars.push(newStar(mouse.pos.x, mouse.pos.y, mouse.speed))
-        if (mouse.speed * 1.5 > 13 && mouse.speed < 100) {
-          currentGalaxy.dust.push(
-            newDust(
-              currentGalaxy.x + Math.cos(TAU * random()) * mouse.speed * 0.1,
-              currentGalaxy.y + Math.sin(TAU * random()) * mouse.speed * 0.1,
-              mouse.speed * 1.5,
-            ),
-          )
+        if (currentGalaxy.stars.length >= MAX_STARS) return
+        // 最小散布 6px：鼠标慢速移动时，星星不会全叠在同一个像素上变成一团
+        const spread = Math.max(mouse.speed, 6)
+        for (let i = 0; i < 3; i++) {
+          const star = newStar(mouse.pos.x, mouse.pos.y, spread)
+          currentGalaxy.stars.push(star)
+          // 尘粒跟在星星后面：小尺寸 + 低概率 + 有寿命，所以是"一层会散的薄雾"而不是一片
+          if (currentGalaxy.dust.length < MAX_DUST && random() < 0.35) {
+            currentGalaxy.dust.push(newDust(star.x, star.y, 5 + random() * 9))
+          }
         }
         calculateCenter(currentGalaxy)
       }
