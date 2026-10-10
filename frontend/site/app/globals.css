@@ -17,9 +17,9 @@
 
   /* 深蓝黑而不是纯黑：纯黑既压不出层次，也显廉价 */
   --bg: light-dark(#ffffff, #0b1119);
-  --bg-elevated: light-dark(#f7f7f8, #131c27);
-  --border: light-dark(#e5e5e8, #1f2a38);
-  --border-soft: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.07));
+  --bg-elevated: light-dark(#f2f3f5, #18222f);
+  --border: light-dark(#e5e5e8, #2b3646);
+  --border-soft: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.12));
   --text: light-dark(#18181b, #e8e8ea);
   --text-muted: light-dark(#6b6b73, #9a9aa3);
   --text-faint: light-dark(#90909a, #6d6d77);
@@ -381,9 +381,7 @@ button.chip:disabled {
 }
 
 .card {
-  -webkit-backdrop-filter: blur(13px) saturate(145%);
-  backdrop-filter: blur(13px) saturate(145%);
-  background: color-mix(in srgb, var(--bg-elevated) 52%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
@@ -1291,9 +1289,7 @@ button.chip:disabled {
 }
 
 .home-side .info-cell {
-  -webkit-backdrop-filter: blur(13px) saturate(145%);
-  backdrop-filter: blur(13px) saturate(145%);
-  background: color-mix(in srgb, var(--bg-elevated) 52%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
   border: 1px solid var(--border-soft);
   border-radius: 10px;
 }
@@ -1440,7 +1436,7 @@ button.chip:disabled {
   border-radius: 10px;
   display: grid;
   grid-template-columns: 19rem minmax(0, 1fr);
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
@@ -1471,7 +1467,8 @@ button.chip:disabled {
 @media (max-width: 48rem) {
   .wide-card {
     grid-template-columns: minmax(0, 1fr);
-  }
+    overflow: visible;
+}
 
   .scroll-zoom,
   .wide-card__blank {
@@ -1510,30 +1507,38 @@ button.chip:disabled {
 }
 /* ---------- 列表：一块居中面板 + 每行左图右文（照参考图） ---------- */
 .list-panel {
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  backdrop-filter: blur(16px) saturate(150%);
-  background: color-mix(in srgb, var(--bg-elevated) 58%, transparent);
+  /*
+   * 这里刻意不用 backdrop-filter：它是卡片的祖先，而祖先一旦有模糊，
+   * 内部正在缩放的封面每帧都要重算模糊 —— 这就是"不丝滑"的根源。
+   */
+  background: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
   border: 1px solid var(--border-soft);
   border-radius: 12px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.26);
   margin: 0 auto;
-  max-width: 62rem;
+  /* 别再收窄：收窄后左右空出一大块，反而更难看 */
+  max-width: 100%;
   padding: 1.4rem 1.5rem 1.6rem;
 }
 
 .wide-card {
+  /* 这一行必须留着：前面还有个旧块声明了 -webkit-backdrop-filter: blur(13px)，
+     而毛玻璃祖先会让里面缩放的元素每帧重算模糊（卡顿来源之一） */
   -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   background: transparent;
   border: 0;
   border-radius: 0;
   grid-template-columns: 14rem minmax(0, 1fr);
   transition: transform 0.25s ease;
+  overflow: visible;
 }
 
 .wide-card + .wide-card {
   border-top: 1px solid var(--border-soft);
   margin-top: 1.1rem;
   padding-top: 1.1rem;
+  overflow: visible;
 }
 
 /* 悬停：整行右移一点、标题变强调色、封面在外层容器上放大（不跟图片的行内 transform 打架） */
@@ -1558,34 +1563,31 @@ button.chip:disabled {
   border-radius: 0.25rem;
   box-shadow: 0 5px 11px rgba(0, 0, 0, 0.18), 0 4px 15px rgba(0, 0, 0, 0.15);
   height: 10rem;
-  overflow: hidden;
+  /* 不裁：图片始终完整显示，悬停时才能整张浮出来而不跳变 */
+  overflow: visible;
+  transition: box-shadow 0.5s ease, transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
 }
 
-.scroll-zoom__shift {
-  display: block;
-  height: 100%;
-  transform: translate3d(0, var(--shift, 0), 0);
-  width: 100%;
-}
 
 .scroll-zoom img {
   display: block;
   height: 100%;
   object-fit: cover;
-  transform: scale(1.06);
-  transition: transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* 提前告诉浏览器这层会动，让它单独合成，缩放才不会一格一格 */
+  will-change: transform;
+  /* 1.05 是滚动位移的余量（位移 ±6px，余量约 8px），再小就会露边 */
+  transform: scale(1.05);
+  transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
   width: 100%;
 }
 
-/* 悬停：放开裁剪，让封面大方地冒到框外；放大到 1.1 */
+/* 悬停：整张封面放大 1.15 并抬起投影（框不裁，所以是"浮出来"而不是"被放大"） */
 .wide-card:hover .scroll-zoom {
-  overflow: visible;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
   position: relative;
+  transform: scale(1.15);
   z-index: 2;
-}
-
-.wide-card:hover .scroll-zoom img {
-  transform: scale(1.1);
 }
 
 .wide-card__blank {
@@ -1600,5 +1602,6 @@ button.chip:disabled {
 
   .wide-card {
     grid-template-columns: minmax(0, 1fr);
-  }
+    overflow: visible;
+}
 }
