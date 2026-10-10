@@ -2,12 +2,14 @@ package com.abyssvstar.blog.export.service
 
 import com.abyssvstar.blog.export.web.dto.ExportPayload
 import com.abyssvstar.blog.export.web.dto.ExportPost
+import com.abyssvstar.blog.export.web.dto.ExportSiteConfig
 import com.abyssvstar.blog.export.web.dto.ExportTag
 import com.abyssvstar.blog.post.domain.PostPublication
 import com.abyssvstar.blog.post.repository.PostPublicationRepository
 import com.abyssvstar.blog.post.repository.PostRepository
 import com.abyssvstar.blog.shared.util.Hashing
 import com.abyssvstar.blog.shared.util.Slugify
+import com.abyssvstar.blog.siteconfig.service.SiteConfigService
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service
 class ExportService(
     private val posts: PostRepository,
     private val publications: PostPublicationRepository,
+    private val siteConfig: SiteConfigService,
     private val objectMapper: ObjectMapper,
 ) {
 
@@ -47,10 +50,16 @@ class ExportService(
             )
         }
 
+        val config = siteConfig.exportView()
         val payload = ExportPayload(
             posts = exportPosts,
             notes = emptyList(),
             tags = collectTags(ordered.mapNotNull { it.id }.mapNotNull { pubMap[it] }),
+            siteConfig = ExportSiteConfig(
+                title = config.title,
+                description = config.description,
+                aboutHtml = config.aboutHtml,
+            ),
         )
 
         // ETag 是整份内容的哈希。内容不变 → 哈希不变 → CI 带 If-None-Match 时直接 304

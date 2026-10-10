@@ -4,7 +4,7 @@
 
 ---
 
-## 1. 表清单（12 张）
+## 1. 表清单（13 张）
 
 | # | 表 | 用途 |
 |---|---|---|
@@ -20,6 +20,7 @@
 | 10 | `daily_views` | 阅读量按天聚合 |
 | 11 | `ai_usage` | AI 调用成本账本 |
 | 12 | `site_builds` | 静态站构建触发记录 |
+| 13 | `site_config` | 站点配置（单行：站名 / 简介 / 关于页正文） |
 
 > **ES 路线下没有 `content_embeddings` 表**：向量存 ES 的 `dense_vector` 字段，不需要 pgvector
 
@@ -230,7 +231,30 @@ CREATE UNIQUE INDEX assets_sha_uq ON assets (sha256) WHERE deleted_at IS NULL;
 
 ---
 
-## 8. 迁移列表（Flyway）
+## 8. site_config —— 站点配置
+
+单行表（`id smallint` 主键 + `CHECK (id = 1)`）。全站只有一份配置，多出一行是没有语义的状态，
+用约束从库这一层挡住，而不是靠代码自觉。
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| `id` | smallint PK | 恒为 1 |
+| `title` | text NOT NULL | 站名。页头、页脚、浏览器标签栏都用它 |
+| `description` | text NOT NULL | SEO 与社交卡片的一句话 |
+| `about_md` | text NOT NULL DEFAULT `''` | 关于页正文的 **Markdown 原文** |
+| `updated_at` | timestamptz NOT NULL DEFAULT now() | |
+
+**只装「作者手写的站点级文字」。** 导航、许可、背景图那些改了要连着改模板的常量，仍然留在公开站代码里 ——
+搬进数据库只会多出「改了没效果」的困惑。搬进来的判断标准是：改它的人不需要改代码。
+
+**关于页正文在导出时渲染成 HTML**（`/api/v1/export` 的 `siteConfig.aboutHtml`），用的就是文章那套渲染器。
+好处是公开站不需要带 Markdown 解析器，标题锚点、代码配色也走和文章正文完全相同的那段构建期处理。
+
+保存即上线：内容真的变了才记一条 `PENDING`，由防抖任务合并成一次构建（见 `04-domain-rules.md` 的构建触发一节）。
+
+---
+
+## 9. 迁移列表（Flyway）
 
 | 版本 | 内容 |
 |---|---|
@@ -242,12 +266,13 @@ CREATE UNIQUE INDEX assets_sha_uq ON assets (sha256) WHERE deleted_at IS NULL;
 | `V6__metrics.sql` | `daily_views`、`ai_usage`、`site_builds` |
 | `V7__trgm_fallback.sql` | `CREATE EXTENSION pg_trgm` + 降级搜索索引 |
 | `V8__job_indexes.sql` | 定时发布扫描索引、ES 补偿索引 |
+| `V9__site_config.sql` | `site_config`（单行，含首行种子配置） |
 
 > 后续迁移**只增不改**：已应用的迁移文件永不修改，结构变更一律新开 `V{n+1}`。
 
 ---
 
-## 9. 待定项（后续批次）
+## 10. 待定项（后续批次）
 
 - ES 索引 mapping、IK 词典配置、`dense_vector` 维度与相似度（第 4 批）
 - 索引同步与补偿策略细节（第 4 批）
