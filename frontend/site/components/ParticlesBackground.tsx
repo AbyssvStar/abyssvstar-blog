@@ -73,7 +73,7 @@ export function ParticlesBackground() {
         detectsOn: 'window',
         events: {
           onHover: { enable: true, mode: ['grab', 'attract'] },
-          onClick: { enable: true, mode: 'push' },
+          // 点击是
           resize: { enable: true },
         },
         modes: {
@@ -83,7 +83,7 @@ export function ParticlesBackground() {
           // 两者平衡时粒子会挂在鼠标周边一圈。如果这样还被吸进去，就把 attract 从 mode 里删掉，
           // 只留 grab —— 那是"完全不吸收"的配置（库的 attract 本身是纯向心力，做不到硬性轨道）。
           attract: { distance: 220, duration: 0.5, speed: 0.3 },
-          push: { quantity: 4 },
+          repulse: { distance: 160, duration: 0.4, factor: 1.6, speed: 2.4 },
         },
       },
     }

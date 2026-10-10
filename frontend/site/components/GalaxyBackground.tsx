@@ -277,7 +277,8 @@ export function GalaxyBackground() {
         distance: 0,
         born: performance.now(),
         // 寿命 8–10 秒；其中 20% 不给寿命 = 永不回收（永久星云，靠上面的 MAX_DUST 兜底）
-        life: random() < 0.2 ? undefined : 8000 + random() * 2000,
+        // 一律给寿命：之前留 20% 永久尘粒，结果就是屏幕上洗不掉的痕迹
+        life: 8000 + random() * 2000,
       })
 
       const calculateCenter = (g: Galaxy) => {

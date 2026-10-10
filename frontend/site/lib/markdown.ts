@@ -82,6 +82,8 @@ async function highlightCode(html: string): Promise<string> {
         lang,
         themes: { light: 'github-light', dark: 'github-dark-default' },
       })
+      // 给 <pre> 补一个 data-language：代码块顶部那条标题栏（mac 圆点 + 语言名）靠它
+      rendered = rendered.replace('<pre ', `<pre data-language="${lang}" `)
     } catch {
       rendered = `<pre><code>${escapeHtml(code)}</code></pre>`
     }

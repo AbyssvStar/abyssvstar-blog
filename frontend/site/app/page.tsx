@@ -14,8 +14,7 @@ export default async function HomePage() {
   const [posts, stats, content] = await Promise.all([getPosts(), getStats(), loadContent()])
   const latest = posts.slice(0, 6)
   const notes = content.notes.slice(0, 4)
-  // 首页顶部那张大图：优先用最新一篇的封面，没有封面就顺延到下一篇有封面的
-  const feature = latest.find((post) => post.coverUrl)
+
 
   return (
     <>
@@ -40,20 +39,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {feature && (
-        <section className="wrap section" style={{ paddingTop: '0.5rem' }}>
-          <Link href={`/posts/${feature.slug}/`} className="feature">
-            {/* 封面尺寸暂时拿不到（导出里没有图片尺寸表），先让容器定比例、图片填满 */}
-            <img src={feature.coverUrl} alt="" decoding="async" />
-            <div className="feature__body">
-              <div className="kicker">最新</div>
-              <h2 className="feature__title">{feature.title}</h2>
-              <p className="feature__summary">{feature.summary}</p>
-            </div>
-          </Link>
-        </section>
-      )}
 
+      {/*
+        这里原来有个侧栏，放的全是"上面和下面都有的东西"（导航、标签），确实是填充物 —— 删掉。
+        卡片网格本身满宽铺开就不空，不够的用一行入口补上。
+      */}
       <section className="wrap section">
         <div className="section__head">
           <div className="section__title">最新文章</div>
@@ -62,6 +52,23 @@ export default async function HomePage() {
           </Link>
         </div>
         <Reveal>{latest.length > 0 ? <PostGrid posts={latest} /> : <EmptyState text="还没有发布任何文章。" />}</Reveal>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1.5rem' }}>
+          {latest[0] && (
+            <Link href={`/posts/${latest[0].slug}/`} className="chip">
+              最新文章
+            </Link>
+          )}
+          <Link href="/archive/" className="chip">
+            归档
+          </Link>
+          <Link href="/about/" className="chip">
+            关于
+          </Link>
+          <a href={site.repo} className="chip" rel="noreferrer" target="_blank">
+            GitHub
+          </a>
+        </div>
       </section>
 
       {notes.length > 0 && (
