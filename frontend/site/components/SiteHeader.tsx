@@ -52,13 +52,9 @@ function ThemeToggle() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
 
   useEffect(() => {
-    // 没显式选过就跟随系统，和 CSS 的判断保持一致
+    // 默认暗色：只有显式选过 light 才是浅色，不再跟随系统偏好
     const saved = document.documentElement.getAttribute('data-theme')
-    if (saved === 'light' || saved === 'dark') {
-      setTheme(saved)
-      return
-    }
-    setTheme(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    setTheme(saved === 'light' ? 'light' : 'dark')
   }, [])
 
   function toggle() {

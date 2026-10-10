@@ -26,6 +26,17 @@ export const site = {
   repo: 'https://github.com/AbyssvStar/abyssvstar-blog',
   /** 文章页底部那行声明。换成你想要的许可（或留空字符串去掉整行） */
   license: '转载请注明出处。',
+  /**
+   * 文章页的背景图（可选）。
+   * 填 `/xxx.jpg`（图片放 frontend/site/public/）或完整 URL，文章页就多一层压到 18% 不透明的背景图；
+   * 留空则只用一层冷色渐变打底。粒子与柔光都跑在这一层之上。
+   */
+  articleBackdropImage: '',
+  /**
+   * 全站背景图（可选）。同样放 frontend/site/public/ 下，填 '/backdrop.jpg' 或完整 URL；
+   * 留空就只用深蓝黑 + 两处冷光晕。填了以后会铺满视口、轻微模糊、压到 30% 不透明度。
+   */
+  backdropImage: '',
 } as const
 
 /** 列表每页几条。静态导出下没有服务端分页，页码是构建时切好的 */

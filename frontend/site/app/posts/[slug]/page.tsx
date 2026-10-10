@@ -12,6 +12,7 @@ import { ImageZoom } from '@/components/ImageZoom'
 import { BackToTop } from '@/components/BackToTop'
 import { Toc } from '@/components/Toc'
 
+
 export const dynamicParams = false
 
 export async function generateStaticParams() {
@@ -60,6 +61,16 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
     <>
       <ReadingProgress />
       <BackToTop />
+
+      {site.articleBackdropImage ? (
+        <div
+          className="article-backdrop"
+          style={{ backgroundImage: `url(${site.articleBackdropImage})` }}
+          aria-hidden="true"
+        />
+      ) : (
+        <div className="article-backdrop article-backdrop--plain" aria-hidden="true" />
+      )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       {post.coverUrl && (
@@ -73,7 +84,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           <Toc headings={headings} />
         </div>
 
-        <div style={{ minWidth: 0 }}>
+        <div className="glass" style={{ minWidth: 0 }}>
           <header className="article__head">
             <h1 className="article__title">{post.title}</h1>
             <PostMeta post={post} />
