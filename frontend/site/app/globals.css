@@ -944,3 +944,149 @@ button.chip:disabled {
   margin-top: 3rem;
   padding-top: 1rem;
 }
+/* ---------- 动效：指针柔光 / 落叶 / 卡片倾斜 ---------- */
+
+/* 跟着指针走的柔光。位置由 JS 写进 transform，这里只管长相 */
+.pointer-glow {
+  background: radial-gradient(closest-side, var(--accent-glow), transparent 72%);
+  filter: blur(18px);
+  height: 860px;
+  left: 0;
+  opacity: 0.22;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 860px;
+  will-change: transform;
+  z-index: -1;
+}
+
+/* 星野粒子：铺满视口，压在最底层（只是画，不参与布局） */
+.particles {
+  height: 100%;
+  left: 0;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: -1;
+}
+
+/* 卡片：轻微倾斜 + 指针高光 */
+.tilt {
+  position: relative;
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform 0.28s ease-out;
+}
+
+.tilt::after {
+  background: radial-gradient(240px circle at var(--spot-x, 50%) var(--spot-y, 50%), var(--accent-soft), transparent 65%);
+  content: '';
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 0.28s;
+}
+
+.tilt:hover::after {
+  opacity: 1;
+}
+
+/* 顶栏链接的 hover：一条从左扫出的下划线 */
+.nav__link {
+  position: relative;
+}
+
+.nav__link::after {
+  background: var(--accent);
+  bottom: 0.15rem;
+  content: '';
+  height: 1px;
+  left: 0.7rem;
+  position: absolute;
+  transition: width 0.22s ease;
+  width: 0;
+}
+
+.nav__link:hover::after,
+.nav__link[data-active='true']::after {
+  width: calc(100% - 1.4rem);
+}
+
+/* 正文图片 hover 轻微放大，给人"可点开"的暗示 */
+.md-body img.zoomable {
+  transition: transform 0.25s ease, border-color 0.25s;
+}
+
+.md-body img.zoomable:hover {
+  border-color: var(--accent);
+  transform: scale(1.012);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pointer-glow,
+  .particles {
+    display: none;
+  }
+
+  .tilt {
+    transform: none;
+    transition: none;
+  }
+
+  .tilt::after {
+    display: none;
+  }
+
+  .nav__link::after {
+    transition: none;
+  }
+}
+/* ---------- 首页「最新一篇」大图卡 ---------- */
+.feature {
+  border: 1px solid var(--border-soft);
+  display: block;
+  overflow: hidden;
+  position: relative;
+}
+
+.feature img {
+  aspect-ratio: 21 / 9;
+  display: block;
+  object-fit: cover;
+  transform: scale(1.001);
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+  width: 100%;
+}
+
+.feature:hover img {
+  transform: scale(1.03);
+}
+
+.feature__body {
+  background: linear-gradient(to top, var(--bg) 8%, transparent);
+  bottom: 0;
+  left: 0;
+  padding: 1.5rem 1.6rem 1.4rem;
+  position: absolute;
+  right: 0;
+}
+
+.feature__title {
+  font-size: clamp(1.25rem, 2.6vw, 1.75rem);
+  margin: 0.55rem 0 0.35rem;
+}
+
+.feature__summary {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0;
+  max-width: 44rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature img {
+    transition: none;
+  }
+}
