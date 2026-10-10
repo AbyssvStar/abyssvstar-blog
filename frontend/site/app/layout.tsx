@@ -3,8 +3,8 @@ import './globals.css'
 import { site } from '@/lib/site'
 import { SiteHeader } from '@/components/SiteHeader'
 import { SiteFooter } from '@/components/SiteFooter'
-import { PointerGlow } from '@/components/PointerGlow'
-import { ParticleField } from '@/components/ParticleField'
+import { ParticlesBackground } from '@/components/ParticlesBackground'
+
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -33,17 +33,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body>
+        {site.backdropImage && (
+          <div
+            className="backdrop__image"
+            style={{ backgroundImage: `url(${site.backdropImage})` }}
+            aria-hidden="true"
+          />
+        )}
         <div className="backdrop" aria-hidden="true">
           <div className="backdrop__grid" />
           <div className="backdrop__stars" />
           <div className="backdrop__glow" />
         </div>
-        {/*
-          星野粒子场 + 指针柔光，都是自写的（没引库）。
-          系统开了「减少动态效果」时它们会自己闭嘴；标签页切走也会停。
-        */}
-        <ParticleField />
-        <PointerGlow />
+
+        <ParticlesBackground />
         <SiteHeader />
         <main>{children}</main>
         <SiteFooter />

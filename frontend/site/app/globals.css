@@ -15,14 +15,19 @@
 :root {
   color-scheme: dark;
 
-  --bg: light-dark(#ffffff, #0a0a0b);
-  --bg-elevated: light-dark(#f7f7f8, #141416);
-  --border: light-dark(#e5e5e8, #26262b);
+  /* 深蓝黑而不是纯黑：纯黑既压不出层次，也显廉价 */
+  --bg: light-dark(#ffffff, #0b1119);
+  --bg-elevated: light-dark(#f7f7f8, #131c27);
+  --border: light-dark(#e5e5e8, #1f2a38);
   --border-soft: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.07));
   --text: light-dark(#18181b, #e8e8ea);
   --text-muted: light-dark(#6b6b73, #9a9aa3);
   --text-faint: light-dark(#90909a, #6d6d77);
+
   --accent: light-dark(#2563eb, #6ea8fe);
+  /* 星野用的两个偏青的强调色 */
+  --sky: light-dark(#2563eb, #8ec5ff);
+  --aqua: light-dark(#0e7490, #67e8f9);
   --accent-soft: light-dark(rgba(37, 99, 235, 0.1), rgba(110, 168, 254, 0.13));
   --accent-glow: light-dark(rgba(37, 99, 235, 0.22), rgba(110, 168, 254, 0.4));
   --code-bg: light-dark(#f6f7f9, #101013);
@@ -30,12 +35,7 @@
   --star: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.55));
 }
 
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
-    color-scheme: light;
-  }
-}
-
+/* 默认暗色（docs/07 的默认主题）：只有显式选了 light 才切浅色 */
 :root[data-theme='light'] {
   color-scheme: light;
 }
@@ -142,7 +142,9 @@ a {
 }
 
 .backdrop__glow {
-  background: radial-gradient(50% 50% at 50% 50%, var(--accent-glow), transparent 70%);
+  background: radial-gradient(50% 50% at 50% 50%, var(--accent-glow), transparent 70%),
+    radial-gradient(38% 55% at 12% 78%, var(--accent-soft), transparent 70%),
+    radial-gradient(34% 45% at 92% 12%, var(--accent-soft), transparent 70%);
   filter: blur(14px);
   height: 30rem;
   left: 50%;
@@ -254,7 +256,9 @@ button.chip:disabled {
 
 /* ---------- 顶栏 ---------- */
 .header {
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  background: color-mix(in srgb, var(--bg) 68%, transparent);
+  backdrop-filter: blur(14px) saturate(150%);
   border-bottom: 1px solid transparent;
   position: sticky;
   top: 0;
@@ -374,7 +378,9 @@ button.chip:disabled {
 }
 
 .card {
-  background: var(--bg);
+  -webkit-backdrop-filter: blur(13px) saturate(145%);
+  backdrop-filter: blur(13px) saturate(145%);
+  background: color-mix(in srgb, var(--bg-elevated) 52%, transparent);
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
@@ -406,7 +412,10 @@ button.chip:disabled {
 }
 
 .list__item {
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
   align-items: baseline;
+  backdrop-filter: blur(12px) saturate(140%);
+  background: color-mix(in srgb, var(--bg-elevated) 38%, transparent);
   border-bottom: 1px solid var(--border-soft);
   display: flex;
   gap: 1rem;
@@ -651,22 +660,15 @@ button.chip:disabled {
   background: none !important;
 }
 
-/* Shiki 双主题：取哪一侧跟上面同一套判断 */
+/* Shiki 双主题：默认暗色，显式选浅色才换 */
 .md-body pre.shiki,
 .md-body pre.shiki span {
-  color: var(--shiki-light);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .md-body pre.shiki,
-  :root:not([data-theme='light']) .md-body pre.shiki span {
-    color: var(--shiki-dark);
-  }
-}
-
-:root[data-theme='dark'] .md-body pre.shiki,
-:root[data-theme='dark'] .md-body pre.shiki span {
   color: var(--shiki-dark);
+}
+
+:root[data-theme='light'] .md-body pre.shiki,
+:root[data-theme='light'] .md-body pre.shiki span {
+  color: var(--shiki-light);
 }
 
 .md-body table {
@@ -946,30 +948,17 @@ button.chip:disabled {
 }
 /* ---------- 动效：指针柔光 / 落叶 / 卡片倾斜 ---------- */
 
-/* 跟着指针走的柔光。位置由 JS 写进 transform，这里只管长相 */
-.pointer-glow {
-  background: radial-gradient(closest-side, var(--accent-glow), transparent 72%);
-  filter: blur(18px);
-  height: 860px;
-  left: 0;
-  opacity: 0.22;
+
+/* 背景粒子（tsParticles）：固定铺满、压在最底层、不吃指针事件 */
+.particles-bg {
+  inset: 0;
   pointer-events: none;
   position: fixed;
-  top: 0;
-  width: 860px;
-  will-change: transform;
   z-index: -1;
 }
 
-/* 星野粒子：铺满视口，压在最底层（只是画，不参与布局） */
-.particles {
-  height: 100%;
-  left: 0;
-  pointer-events: none;
-  position: fixed;
-  top: 0;
-  width: 100%;
-  z-index: -1;
+.particles-bg canvas {
+  display: block;
 }
 
 /* 卡片：轻微倾斜 + 指针高光 */
@@ -1025,8 +1014,7 @@ button.chip:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pointer-glow,
-  .particles {
+  .particles-bg {
     display: none;
   }
 
@@ -1045,6 +1033,8 @@ button.chip:disabled {
 }
 /* ---------- 首页「最新一篇」大图卡 ---------- */
 .feature {
+  -webkit-backdrop-filter: blur(13px) saturate(145%);
+  backdrop-filter: blur(13px) saturate(145%);
   border: 1px solid var(--border-soft);
   display: block;
   overflow: hidden;
@@ -1088,5 +1078,154 @@ button.chip:disabled {
 @media (prefers-reduced-motion: reduce) {
   .feature img {
     transition: none;
+  }
+}
+/* ---------- 首页满屏 hero：只有一句标语 + 星河特效 ---------- */
+.hero-full {
+  align-items: center;
+  display: flex;
+  height: calc(100svh - 3.75rem);
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  text-align: center;
+}
+
+.hero-canvas {
+  height: 100%;
+  inset: 0;
+  position: absolute;
+  width: 100%;
+  z-index: 0;
+}
+
+.hero-full__inner {
+  max-width: 52rem;
+  padding: 0 1.25rem;
+  pointer-events: none;
+  position: relative;
+  user-select: none;
+  z-index: 1;
+}
+
+.hero-full__title {
+  font-size: clamp(2.8rem, 9vw, 6rem);
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.hero-full__sub {
+  color: var(--text-muted);
+  font-size: 1rem;
+  margin: 1.1rem auto 0;
+  max-width: 30rem;
+}
+
+.hero-full__hint {
+  bottom: 1.6rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  position: absolute;
+  z-index: 1;
+}
+
+/* ---------- 文章页底色（可选图片 + 冷色渐变兜底） ---------- */
+.article-backdrop {
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
+  inset: 0;
+  opacity: 0.18;
+  position: fixed;
+  z-index: -2;
+}
+
+.article-backdrop--plain {
+  background-image: radial-gradient(120% 70% at 50% 0%, var(--accent-soft), transparent 60%),
+    linear-gradient(to bottom, var(--bg-elevated), var(--bg));
+  opacity: 1;
+}
+/* ---------- 毛玻璃面板：文章内容垫在它上面，TOC 留在外面 ---------- */
+.glass {
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  background: color-mix(in srgb, var(--bg-elevated) 62%, transparent);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  padding: 1.6rem 1.75rem 2rem;
+}
+
+@media (max-width: 62rem) {
+  .glass {
+    padding: 1.2rem 1.1rem 1.5rem;
+  }
+}
+/* ---------- 可选的全站背景图 ---------- */
+.backdrop__image {
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
+  filter: blur(3px);
+  inset: 0;
+  opacity: 0.3;
+  pointer-events: none;
+  position: fixed;
+  transform: scale(1.04);
+  z-index: -3;
+}
+/* ---------- 首页星野舞台 ---------- */
+.hero-stage {
+  align-items: center;
+  display: flex;
+  height: calc(100svh - 3.75rem);
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 三块画布：id 那块是常驻星野，两个 .galaxy 是拖动出来的星系（尘埃层 + 星层）。
+   screen 混合让它们在深色底上做加色，像真的在发光。 */
+#star-bg,
+.galaxy {
+  height: 100%;
+  left: 0;
+  mix-blend-mode: screen;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.hero-stage__inner {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  max-width: 60rem;
+  padding: 0 1.25rem;
+  /* 关键：不吃指针事件，按在字上也能开始拖，也不会选中文字 */
+  pointer-events: none;
+  position: relative;
+  text-align: center;
+  user-select: none;
+  z-index: 1;
+}
+
+.hero-stage__title {
+  font-size: clamp(2.8rem, 9vw, 5.5rem);
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.hero-stage__sub {
+  color: var(--text-muted);
+  font-size: 1rem;
+  margin: 1.1rem auto 0;
+  max-width: 32rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #star-bg,
+  .galaxy {
+    display: none;
   }
 }
