@@ -29,11 +29,18 @@ export interface ExportTag {
   count: number
 }
 
+export interface ExportSiteConfig {
+  title: string
+  description: string
+  /** 关于页正文。后端渲染好的 HTML，和文章正文是同一种东西 */
+  aboutHtml: string
+}
+
 export interface ExportPayload {
   posts: ExportPost[]
   notes: ExportNote[]
   tags: ExportTag[]
-  siteConfig?: { title: string; description: string } | null
+  siteConfig?: ExportSiteConfig | null
 }
 
 const EXPORT_URL = process.env.EXPORT_URL ?? 'http://127.0.0.1:8080/api/v1/export'
@@ -60,9 +67,17 @@ async function fetchExport(): Promise<ExportPayload> {
 
   let res: Response
   try {
-    // force-cache 不是想复用缓存：静态导出下 Next 必须把这次 fetch 认定成静态数据，
-    // 否则整页会被判成动态渲染、导出直接失败。真正的「只拉一次」由上面的 pending 保证。
-    res = await fetch(EXPORT_URL, { headers, cache: 'force-cache' })
+    /*
+     * 这一步的缓存语义要拿捏：
+     *
+     *  - 不带任何缓存选项 ⇒ Next 把这次 fetch 当成动态数据，整页被判成动态渲染，导出直接失败
+     *  - `force-cache`（永不过期）⇒ Next 把结果写进 .next/cache，**下次构建还会用它**。
+     *    本地实测过：后端内容明明改了，重新构建出来的还是前天的页面，最难发现的一种错
+     *
+     * 所以用「静态 + 30 秒过期」：一次构建里多个 worker 共用同一份结果（只拉一次），
+     * 而下一个构建会重新去问后端。CI 每次都是干净的文件系统，永远是拉新的。
+     */
+    res = await fetch(EXPORT_URL, { headers, next: { revalidate: 30 } })
   } catch (cause) {
     // 宁可让构建失败，也不要发一个空站上去 —— 那比构建失败难发现得多
     throw new Error(`拉取内容失败（${EXPORT_URL}）：${describeError(cause)}`)
@@ -108,6 +123,21 @@ export async function getNeighbours(slug: string): Promise<{ prev?: ExportPost; 
 export async function getTags(): Promise<ExportTag[]> {
   const { tags } = await loadContent()
   return tags
+}
+
+/**
+ * 站点配置：站名、SEO 简介、关于页正文。
+ *
+ * 这三样都在后台的「站点」页里改，改完会重建站。`lib/site.ts` 里那份是兜底 ——
+ * 导出里没有 siteConfig 时（后端还没升上来）站点照样得能开。
+ */
+export async function getSiteConfig(): Promise<ExportSiteConfig> {
+  const { siteConfig } = await loadContent()
+  return {
+    title: siteConfig?.title?.trim() || site.title,
+    description: siteConfig?.description?.trim() || site.description,
+    aboutHtml: siteConfig?.aboutHtml ?? '',
+  }
 }
 
 /** 按标签筛文章（标签是快照里的名字） */

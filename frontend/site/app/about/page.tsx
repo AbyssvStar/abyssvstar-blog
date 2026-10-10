@@ -1,36 +1,28 @@
 import type { Metadata } from 'next'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { transformPostHtml } from '@/lib/markdown'
 import { CodeCopy } from '@/components/CodeCopy'
-import { site } from '@/lib/site'
+import { getSiteConfig } from '@/lib/content'
 
-export const metadata: Metadata = {
-  title: '关于',
-  description: site.description,
-  alternates: { canonical: '/about/' },
-}
-
-/**
- * 关于页的正文来自 `frontend/site/content/about.md`。
- *
- * 为什么先做成文件：改一个文件、重新构建就有新页面，零后端改动。
- * 文档里本来就把「关于页」算作站点内容（后台的 site-config 接口，
- * 在 API 契约里标着待做），等 G3 那条接口做出来，这里换成读导出内容即可 —— 页面结构不用动。
- */
-function loadAbout(): string {
-  try {
-    return readFileSync(join(process.cwd(), 'content', 'about.md'), 'utf8')
-  } catch {
-    return ''
+export async function generateMetadata(): Promise<Metadata> {
+  const { description } = await getSiteConfig()
+  return {
+    title: '关于',
+    description,
+    alternates: { canonical: '/about/' },
   }
 }
 
+/**
+ * 关于页。
+ *
+ * 正文在后台的「站点」页里写（Markdown），导出时已由后端渲染成 HTML —— 和文章正文是
+ * 同一种东西，所以这里走的是同一段构建期处理：补标题锚点、用 Shiki 给代码上色。
+ */
 export default async function AboutPage() {
-  const source = loadAbout()
+  const { aboutHtml } = await getSiteConfig()
   // 正文里已经有 H1 就不再补一个，免得出现两个标题
-  const hasOwnTitle = /^#\s+/m.test(source)
-  const { html } = source.trim() ? await transformPostHtml(source) : { html: '' }
+  const hasOwnTitle = /<h1[\s>]/.test(aboutHtml)
+  const { html } = aboutHtml.trim() ? await transformPostHtml(aboutHtml) : { html: '' }
 
   return (
     <div className="wrap" style={{ maxWidth: '46rem', padding: '3rem 0 4rem' }}>
@@ -41,7 +33,7 @@ export default async function AboutPage() {
           <CodeCopy containerId="about-body" />
         </>
       ) : (
-        <p className="faint">content/about.md 还是空的。</p>
+        <p className="faint">关于页还空着 —— 后台的「站点」页可以写它。</p>
       )}
     </div>
   )
