@@ -31,8 +31,8 @@ export default async function ArchivePage() {
             </span>
           </div>
           {months.map(({ month, posts: monthPosts }) => (
-            <div key={month} style={{ marginBottom: '1.25rem' }}>
-              <div className="kicker" style={{ marginBottom: '0.35rem' }}>
+            <div key={month} className="timeline" style={{ marginBottom: '1.25rem' }}>
+              <div className="kicker timeline__dot" style={{ marginBottom: '0.35rem' }}>
                 {month} 月
               </div>
               <PostRows posts={monthPosts} />

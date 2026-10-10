@@ -48,7 +48,7 @@
   --font-sans: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --maxw: 66rem;
-  --readw: 42rem;
+  --readw: 46rem;
 }
 
 *,
@@ -440,13 +440,13 @@ button.chip:disabled {
 }
 
 /* ---------- 文章页 ---------- */
+/* 进度条容器：只做定位，不再自己上色（旧规则留着会让它变成一条满宽色带） */
 .progress {
-  background: var(--accent);
-  height: 2px;
+  background: transparent;
+  height: 3px;
   left: 0;
   position: fixed;
-  top: 0;
-  transition: width 0.1s linear;
+  right: 0;
   z-index: 30;
 }
 
@@ -664,14 +664,16 @@ button.chip:disabled {
 }
 
 /* Shiki 双主题：默认暗色，显式选浅色才换 */
+/* Shiki 双主题把"浅色"写在行内 style 里（color:#24292e），
+   行内样式优先级高于样式表 —— 没有 !important 的话，深色下代码就是近黑色，几乎看不见。 */
 .md-body pre.shiki,
 .md-body pre.shiki span {
-  color: var(--shiki-dark);
+  color: var(--shiki-dark, var(--text)) !important;
 }
 
 :root[data-theme='light'] .md-body pre.shiki,
 :root[data-theme='light'] .md-body pre.shiki span {
-  color: var(--shiki-light);
+  color: var(--shiki-light, var(--text)) !important;
 }
 
 .md-body table {
@@ -1225,9 +1227,10 @@ button.chip:disabled {
 
 .hero-stage__sub {
   color: var(--text-muted);
-  font-size: 1rem;
+  font-size: clamp(1.15rem, 2.6vw, 1.5rem);
+  letter-spacing: 0.02em;
   margin: 1.1rem auto 0;
-  max-width: 32rem;
+  max-width: 26rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1262,4 +1265,163 @@ button.chip:disabled {
 :root[data-theme='light'] #star-bg,
 :root[data-theme='light'] .galaxy {
   mix-blend-mode: normal;
+}
+/* ---------- 版心加宽（原来 66rem，两边空太多） ---------- */
+:root {
+  --maxw: 78rem;
+}
+
+/* ---------- 首页两栏 ---------- */
+.home-cols {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+}
+
+@media (max-width: 60rem) {
+  .home-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.home-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.home-side .info-cell {
+  -webkit-backdrop-filter: blur(13px) saturate(145%);
+  backdrop-filter: blur(13px) saturate(145%);
+  background: color-mix(in srgb, var(--bg-elevated) 52%, transparent);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+
+.home-side ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-side li + li {
+  margin-top: 0.4rem;
+}
+
+/* ---------- 点击扩散环 ---------- */
+.click-ripple {
+  animation: click-ring 0.65s ease-out forwards;
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  height: 16px;
+  left: 0;
+  margin: -8px 0 0 -8px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 16px;
+  z-index: 40;
+}
+
+@keyframes click-ring {
+  from {
+    opacity: 0.55;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(7);
+  }
+}
+
+/* ---------- 代码块：mac 圆点 + 语言标签（参考 Fluid 主题的样式） ---------- */
+.md-body pre[data-language]::before {
+  background-image: radial-gradient(circle at 7px 50%, #ff5f57 3.4px, transparent 4px),
+    radial-gradient(circle at 19px 50%, #febc2e 3.4px, transparent 4px),
+    radial-gradient(circle at 31px 50%, #28c840 3.4px, transparent 4px);
+  background-repeat: no-repeat;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-faint);
+  content: attr(data-language);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  margin: -1rem -1.1rem 0.9rem;
+  padding: 0.4rem 0.9rem 0.4rem 2.9rem;
+}
+/* ---------- 点击迸发（canvas） ---------- */
+.click-burst {
+  height: 100%;
+  left: 0;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 40;
+}
+
+/* ---------- 列表缩略图 ---------- */
+.list__thumb {
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  flex: none;
+  height: 34px;
+  object-fit: cover;
+  width: 52px;
+}
+
+/* ---------- 归档时间线 ---------- */
+.timeline {
+  border-left: 1px solid var(--border);
+  padding-left: 1.1rem;
+  position: relative;
+}
+
+.timeline__dot {
+  position: relative;
+}
+
+.timeline__dot::before {
+  background: var(--accent);
+  border-radius: 50%;
+  content: '';
+  height: 7px;
+  left: -1.42rem;
+  position: absolute;
+  top: 0.25rem;
+  width: 7px;
+}
+
+/* ---------- 阅读进度：挪到底部，并加一个小标记 ---------- */
+.progress {
+  bottom: 0;
+  height: 3px;
+  left: 0;
+  position: fixed;
+  right: 0;
+  z-index: 30;
+}
+
+.progress__bar {
+  background: linear-gradient(to right, var(--accent), var(--sky));
+  box-shadow: 0 0 10px var(--accent-glow);
+  height: 3px;
+}
+
+.progress__mark {
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--accent-glow);
+  height: 9px;
+  margin-left: -4.5px;
+  position: absolute;
+  top: -3px;
+  width: 9px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .click-burst {
+    display: none;
+  }
 }

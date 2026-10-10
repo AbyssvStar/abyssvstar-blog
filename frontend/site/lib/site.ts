@@ -8,9 +8,9 @@ export const site = {
   /** 站点名，也是首页的大字标题和浏览器标签栏上的名字 */
   title: 'AbyssvStar',
   /** 首页那句说明：只讲这里放什么，不用形容词 */
-  intro: '这里放我写的东西：技术笔记、工程里的取舍，以及一些还没想清楚的记录。',
+  intro: '悟已往之不谏，知来者之可追',
   /** 给搜索引擎和社交卡片用的一句话 */
-  description: 'AbyssvStar 的个人站点：技术笔记、工程取舍与随笔。',
+  description: 'AbyssvStar 的个人站点：技术文章、随手笔记，以及一个能问「我写过什么」的检索。',
   author: 'AbyssvStar',
   /** canonical / RSS / sitemap 用的绝对地址前缀 */
   url: (process.env.SITE_URL ?? 'https://blog.example.com').replace(/\/$/, ''),

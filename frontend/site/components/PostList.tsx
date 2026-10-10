@@ -34,6 +34,7 @@ export function PostRows({ posts }: { posts: ExportPost[] }) {
     <div className="list">
       {posts.map((post) => (
         <Link key={post.slug} href={`/posts/${post.slug}/`} className="list__item">
+
           <span className="list__date">{formatDate(post.publishedAt)}</span>
           <span style={{ fontWeight: 500 }}>{post.title}</span>
           <span className="muted" style={{ fontSize: '0.82rem', marginLeft: 'auto', textAlign: 'right' }}>
