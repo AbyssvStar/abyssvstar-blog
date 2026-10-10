@@ -9,16 +9,16 @@ function buildStamp(): string {
   return new Date().toISOString().slice(0, 16).replace('T', ' ') + 'Z'
 }
 
-export function SiteFooter() {
+export function SiteFooter({ title, description }: { title: string; description: string }) {
   return (
     <footer className="footer">
       <div className="wrap">
         <div className="footer__cols">
           <div>
             <div className="mono" style={{ color: 'var(--text)' }}>
-              {site.title}
+              {title}
             </div>
-            <p style={{ marginTop: '0.5rem', maxWidth: '22rem' }}>{site.description}</p>
+            <p style={{ marginTop: '0.5rem', maxWidth: '22rem' }}>{description}</p>
           </div>
           <div>
             <div className="kicker" style={{ marginBottom: '0.5rem' }}>

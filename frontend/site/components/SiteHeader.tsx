@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { site } from '@/lib/site'
 
-export function SiteHeader() {
+/** title 由 layout 传下来：它来自后台的站点配置，不是编译进代码里的常量 */
+export function SiteHeader({ title }: { title: string }) {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
 
@@ -20,9 +21,9 @@ export function SiteHeader() {
   return (
     <header className="header" data-scrolled={scrolled}>
       <div className="wrap header__inner">
-        <Link href="/" className="brand" aria-label={site.title}>
+        <Link href="/" className="brand" aria-label={title}>
           <StarMark />
-          {site.title}
+          {title}
         </Link>
 
         <nav className="nav">
