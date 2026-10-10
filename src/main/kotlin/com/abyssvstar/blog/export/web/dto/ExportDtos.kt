@@ -13,7 +13,7 @@ data class ExportPayload(
     val notes: List<ExportNote>,
     /** 由已发布文章的标签快照去重统计得来 */
     val tags: List<ExportTag>,
-    /** 站点配置还没做，目前为 null，由前端用自己的配置兜底 */
+    /** 站名、SEO 简介，以及渲染好的关于页正文 */
     val siteConfig: ExportSiteConfig? = null,
 )
 
@@ -44,4 +44,9 @@ data class ExportTag(
 data class ExportSiteConfig(
     val title: String,
     val description: String,
+    /**
+     * 关于页正文。在导出时就渲染成 HTML —— 公开站和文章正文走同一段构建期处理，
+     * 排版自然一致，页面上也不用再带一个 Markdown 解析器。
+     */
+    val aboutHtml: String,
 )
