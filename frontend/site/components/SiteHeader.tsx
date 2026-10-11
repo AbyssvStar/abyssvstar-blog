@@ -53,9 +53,27 @@ function ThemeToggle() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
 
   useEffect(() => {
-    // 默认暗色：只有显式选过 light 才是浅色，不再跟随系统偏好
-    const saved = document.documentElement.getAttribute('data-theme')
-    setTheme(saved === 'light' ? 'light' : 'dark')
+    /*
+     * 把上一次的选择读回来 —— 开关一直是「只写不读」，所以选了浅色一刷新就回到默认的深色。
+     *
+     * 静态导出没法在首屏之前跑这段（Next 会把内联 <script> 塞进 RSC 队列、并不会变成真正的
+     * script 标签；裸 <script> React 又拒绝渲染），所以刷新时可能有一瞬是深色再切过来。
+     * 想彻底消掉这一下，只能改成跟随系统偏好。
+     */
+    let saved: string | null = null
+    try {
+      saved = window.localStorage.getItem('site-theme')
+    } catch {
+      // 隐私模式读不了，那就用默认的
+    }
+    const next: 'dark' | 'light' =
+      saved === 'light' || saved === 'dark'
+        ? saved
+        : document.documentElement.getAttribute('data-theme') === 'light'
+          ? 'light'
+          : 'dark'
+    document.documentElement.setAttribute('data-theme', next)
+    setTheme(next)
   }, [])
 
   function toggle() {
