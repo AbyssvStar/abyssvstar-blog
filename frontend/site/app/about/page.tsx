@@ -17,11 +17,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * 正文里若自带一级标题就去掉：页头已经有一个「关于我」了，两个一级标题只会打架。
- * 只削开头那一个，正文中间的小标题不动。
+ * 正文开头若就是「关于」这个一级标题，削掉它 —— banner 上已经有一个了。
+ *
+ * 只削这一种：作者另外写的一级标题（比如「欢迎来到我的个人博客」）要原样留着，
+ * 否则会变成「我写的标题怎么不见了」这种最难查的问题。
  */
-function stripLeadingH1(html: string): string {
-  return html.replace(/^\s*<h1[\s\S]*?<\/h1>\s*/, '')
+function stripRedundantTitle(html: string): string {
+  return html.replace(/^\s*<h1[^>]*>([\s\S]*?)<\/h1>\s*/, (whole: string, inner: string) => {
+    const text = inner.replace(/<[^>]+>/g, '').trim()
+    return /^(关于|关于我|about)$/i.test(text) ? '' : whole
+  })
 }
 
 /**
@@ -34,7 +39,7 @@ function stripLeadingH1(html: string): string {
  */
 export default async function AboutPage() {
   const [config, posts] = await Promise.all([getSiteConfig(), getPosts()])
-  const body = stripLeadingH1(config.aboutHtml).trim()
+  const body = stripRedundantTitle(config.aboutHtml).trim()
   const { html } = body ? await transformPostHtml(body) : { html: '' }
 
   return (
