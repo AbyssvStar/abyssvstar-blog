@@ -689,17 +689,22 @@ button.chip:disabled {
   background: none !important;
 }
 
-/* Shiki 双主题：默认暗色，显式选浅色才换 */
-/* Shiki 双主题把"浅色"写在行内 style 里（color:#24292e），
-   行内样式优先级高于样式表 —— 没有 !important 的话，深色下代码就是近黑色，几乎看不见。 */
-.md-body pre.shiki,
-.md-body pre.shiki span {
+/*
+ * Shiki 双主题。
+ *
+ * 它把**浅色**那套写在行内 style 里（`color:#24292e`），深色那套塞在自定义属性 `--shiki-dark`。
+ * 行内样式优先级高于样式表，所以深色必须用 !important 覆盖 —— 不覆盖的话，深色主题下代码是近黑色，几乎看不见。
+ *
+ * 浅色这边**什么都不要写**，让行内那份原样生效。曾经在这里写过 `var(--shiki-light, var(--text))`：
+ * **Shiki 根本不产出 `--shiki-light`**，于是回退成 `var(--text)`（近黑 #18181b），
+ * 结果浅色模式下每个 token 都被刷成同一个黑色，语法颜色全没了。
+ *
+ * 用 :not([data-theme='light']) 而不是 [data-theme='dark']：没显式选主题时是默认深色，
+ * 那种情况也得盖上（见上面的令牌一节）。
+ */
+:root:not([data-theme='light']) .md-body pre.shiki,
+:root:not([data-theme='light']) .md-body pre.shiki span {
   color: var(--shiki-dark, var(--text)) !important;
-}
-
-:root[data-theme='light'] .md-body pre.shiki,
-:root[data-theme='light'] .md-body pre.shiki span {
-  color: var(--shiki-light, var(--text)) !important;
 }
 
 .md-body table {
