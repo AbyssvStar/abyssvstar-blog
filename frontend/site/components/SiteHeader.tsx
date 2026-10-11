@@ -54,11 +54,8 @@ function ThemeToggle() {
 
   useEffect(() => {
     /*
-     * 把上一次的选择读回来 —— 开关一直是「只写不读」，所以选了浅色一刷新就回到默认的深色。
-     *
-     * 静态导出没法在首屏之前跑这段（Next 会把内联 <script> 塞进 RSC 队列、并不会变成真正的
-     * script 标签；裸 <script> React 又拒绝渲染），所以刷新时可能有一瞬是深色再切过来。
-     * 想彻底消掉这一下，只能改成跟随系统偏好。
+     * 首屏那一下已经由 layout 里的内联脚本贴好了（见 layout.tsx 的 THEME_INIT），
+     * 这里只是把按钮的状态跟上去；万一那段脚本被谁剥掉了，也算一个兜底。
      */
     let saved: string | null = null
     try {
