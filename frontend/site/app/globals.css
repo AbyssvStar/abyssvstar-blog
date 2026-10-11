@@ -550,6 +550,21 @@ button.chip:disabled {
   margin-top: 1.15rem;
 }
 
+/*
+ * 一级标题：md 里写 `#` 就该像标题。
+ *
+ * Tailwind 的 preflight 把 h1–h6 全设成「font-size / font-weight 继承」，
+ * 所以站点这边必须自己给尺寸 —— 少了这一条，作者写的 `#` 只剩加粗，字号和正文一样。
+ * 后台预览有一份自己的 .preview-body h1，所以那边看不出这个问题。
+ */
+.md-body h1 {
+  border-top: 1px solid var(--border-soft);
+  font-size: 1.7rem;
+  margin-top: 2.4rem;
+  padding-top: 1.5rem;
+  scroll-margin-top: 5rem;
+}
+
 .md-body h2 {
   border-top: 1px solid var(--border-soft);
   font-size: 1.35rem;
@@ -568,6 +583,19 @@ button.chip:disabled {
   font-size: 1rem;
   margin-top: 1.6rem;
   scroll-margin-top: 5rem;
+}
+
+/* h5 / h6 同理：preflight 之后不写就退化成正文 */
+.md-body h5 {
+  color: var(--text-muted);
+  font-size: 0.98rem;
+  margin-top: 1.6rem;
+}
+
+.md-body h6 {
+  color: var(--text-faint);
+  font-size: 0.92rem;
+  margin-top: 1.5rem;
 }
 
 .md-body a {
