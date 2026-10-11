@@ -46,10 +46,28 @@ export interface ExportPayload {
 const EXPORT_URL = process.env.EXPORT_URL ?? 'http://127.0.0.1:8080/api/v1/export'
 const EXPORT_TOKEN = process.env.EXPORT_TOKEN ?? ''
 
+/**
+ * dev 和构建期要的缓存行为不一样：
+ *
+ *  - 构建期：这次 fetch 必须被 Next 判成静态数据，否则导出直接失败；但也不能永不过期
+ *    （`force-cache` 会把结果留在 .next 里给下次构建用，见 AGENTS 那条坑）
+ *  - dev：要的就是「后台改完，刷新就看见」，缓存只会碍事
+ */
+const CACHE_MODE =
+  process.env.NODE_ENV === 'development'
+    ? ({ cache: 'no-store' } as const)
+    : ({ next: { revalidate: 30 } } as const)
+
 let pending: Promise<ExportPayload> | null = null
 
-/** 一次构建只拉一次：页面多的时候也只是一次请求 */
+/**
+ * 内容的读取入口。
+ *
+ * 构建期只拉一次（页面多也只是一次请求）；dev 下每次都重新拉 —— 否则那份导出会被
+ * 钉在这个进程里，后台改了关于页得重启 dev server 才看得见。
+ */
 export function loadContent(): Promise<ExportPayload> {
+  if (process.env.NODE_ENV === 'development') return fetchExport()
   if (!pending) pending = fetchExport()
   return pending
 }
@@ -77,7 +95,7 @@ async function fetchExport(): Promise<ExportPayload> {
      * 所以用「静态 + 30 秒过期」：一次构建里多个 worker 共用同一份结果（只拉一次），
      * 而下一个构建会重新去问后端。CI 每次都是干净的文件系统，永远是拉新的。
      */
-    res = await fetch(EXPORT_URL, { headers, next: { revalidate: 30 } })
+    res = await fetch(EXPORT_URL, { headers, ...CACHE_MODE })
   } catch (cause) {
     // 宁可让构建失败，也不要发一个空站上去 —— 那比构建失败难发现得多
     throw new Error(`拉取内容失败（${EXPORT_URL}）：${describeError(cause)}`)
