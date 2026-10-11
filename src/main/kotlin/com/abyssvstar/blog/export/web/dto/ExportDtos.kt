@@ -44,6 +44,9 @@ data class ExportTag(
 data class ExportSiteConfig(
     val title: String,
     val description: String,
+    /** 关于页的封面图 / 头像；没设就是 null，公开站退回到渐变底与默认头像 */
+    val aboutCoverUrl: String? = null,
+    val aboutAvatarUrl: String? = null,
     /**
      * 关于页正文。在导出时就渲染成 HTML —— 公开站和文章正文走同一段构建期处理，
      * 排版自然一致，页面上也不用再带一个 Markdown 解析器。

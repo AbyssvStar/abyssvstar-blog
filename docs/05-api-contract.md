@@ -164,7 +164,7 @@ Header: X-Export-Token: <token>
 | 项 | 规则 |
 |---|---|
 | Token 存放 | GitHub Secrets + 服务器环境变量，**绝不进 Git、绝不进配置文件** |
-| 返回内容 | 全量发布快照：`posts` + `notes` + `tags` + `siteConfig`（站名 / 简介 / 渲染好的关于页 HTML） |
+| 返回内容 | 全量发布快照：`posts` + `notes` + `tags` + `siteConfig`（站名 / 简介 / 渲染好的关于页 HTML / 封面图与头像地址） |
 | 排序 | 稳定排序（`published_at DESC, id DESC`），保证内容不变时响应字节一致 |
 | **ETag** | 响应带 `ETag`（全部内容 hash）。CI 带 `If-None-Match` 请求，**内容没变直接 304** —— 省掉每次全量传输 |
 | 限流 | 每分钟 ≤ 10 次（CI 正常远低于此） |
@@ -214,7 +214,7 @@ Header: X-Export-Token: <token>
 | 媒体·其余 | `GET /assets`、`DELETE /assets/{id}` | 🚧 |
 | 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | 🚧 |
 | 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | 🚧 |
-| 站点配置 | `GET/PUT /site-config`、`POST /site-config/preview` | ✅ 站名 / 简介 / 关于页正文（Markdown）；保存即记一条构建请求 |
+| 站点配置 | `GET/PUT /site-config`、`POST /site-config/preview` | ✅ 站名 / 简介 / 关于页正文（Markdown）/ 封面图 / 头像；保存即记一条构建请求 |
 | 构建 | `GET /builds`、`POST /builds/trigger`（手动触发） | ✅ 10s 扫描 + 30s 防抖合并成一次 `repository_dispatch`；需 `BLOG_SITE_BUILD_ENABLED=true` + token 才真的发出去 |
 | 统计 | `GET /stats`（阅读量 / AI 成本 / 内存快照） | 🚧 待做 |
 | AI | `POST /ai/summary`、`/ai/tags`、`/ai/related` | 🚧 G5 |
