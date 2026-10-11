@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import { buildsApi } from '../api/builds'
+import { postsApi } from '../api/posts'
 import { siteConfigApi } from '../api/siteConfig'
 import type { SiteBuildInfo } from '../api/types'
 
@@ -25,6 +26,9 @@ export function SiteConfigPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [aboutMarkdown, setAboutMarkdown] = useState('')
+  const [aboutCoverUrl, setAboutCoverUrl] = useState('')
+  const [aboutAvatarUrl, setAboutAvatarUrl] = useState('')
+  const [uploading, setUploading] = useState<'cover' | 'avatar' | null>(null)
   const [preview, setPreview] = useState('')
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -70,6 +74,8 @@ export function SiteConfigPage() {
         setDescription(config.description)
         setAboutMarkdown(config.aboutMarkdown)
         latestAbout.current = config.aboutMarkdown
+        setAboutCoverUrl(config.aboutCoverUrl ?? '')
+        setAboutAvatarUrl(config.aboutAvatarUrl ?? '')
         void refreshPreview(config.aboutMarkdown)
       })
       .catch((err: unknown) => {
@@ -122,11 +128,19 @@ export function SiteConfigPage() {
     setSave({ kind: 'saving' })
     try {
       // 服务端会把站名、简介两端的空白去掉，所以存完把响应写回输入框
-      const saved = await siteConfigApi.save({ title, description, aboutMarkdown: latestAbout.current })
+      const saved = await siteConfigApi.save({
+        title,
+        description,
+        aboutMarkdown: latestAbout.current,
+        aboutCoverUrl,
+        aboutAvatarUrl,
+      })
       setTitle(saved.title)
       setDescription(saved.description)
       setAboutMarkdown(saved.aboutMarkdown)
       latestAbout.current = saved.aboutMarkdown
+      setAboutCoverUrl(saved.aboutCoverUrl ?? '')
+      setAboutAvatarUrl(saved.aboutAvatarUrl ?? '')
       dirtyRef.current = false
       setSave({ kind: 'saved', at: new Date() })
       void refreshBuilds()
@@ -135,6 +149,27 @@ export function SiteConfigPage() {
         kind: 'failed',
         message: err instanceof ApiError ? `${err.message}（${err.code}）` : '保存失败',
       })
+    }
+  }
+
+  /**
+   * 传图。先传上去拿到 media 地址，**再点保存**才会上线 —— 和「保存就是上线」这条保持一致，
+   * 免得手一抖传错一张就把站点重建了一次。
+   */
+  async function pickImage(kind: 'cover' | 'avatar', file: File) {
+    setUploading(kind)
+    try {
+      const asset = await postsApi.uploadAsset(file)
+      if (kind === 'cover') setAboutCoverUrl(asset.url)
+      else setAboutAvatarUrl(asset.url)
+      markDirty()
+    } catch (err) {
+      setSave({
+        kind: 'failed',
+        message: err instanceof ApiError ? `${err.message}（${err.code}）` : '图片上传失败',
+      })
+    } finally {
+      setUploading(null)
     }
   }
 
@@ -151,6 +186,13 @@ export function SiteConfigPage() {
     } finally {
       setBuildBusy(false)
     }
+  }
+
+  /** 文件输入框要清空 value，否则连选同一张图不会再触发 change */
+  function onPickImage(kind: 'cover' | 'avatar', e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) void pickImage(kind, file)
   }
 
   if (loadError) return <div className="banner banner--danger">{loadError}</div>
@@ -195,6 +237,103 @@ export function SiteConfigPage() {
             placeholder="给搜索引擎和社交卡片用的一句话"
             className="field"
           />
+        </div>
+      </div>
+
+      <div className="field-label" style={{ marginBottom: 6, marginTop: 18 }}>
+        关于页的图
+      </div>
+      <div className="flex flex-wrap items-start gap-5">
+        <div>
+          <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>
+            封面图（建议 16:7 的横图，窄屏会裁成 21:9）
+          </div>
+          {aboutCoverUrl ? (
+            <img
+              src={aboutCoverUrl}
+              alt="关于页封面"
+              style={{ border: '1px solid var(--border)', borderRadius: 6, height: 108, objectFit: 'cover', width: 260 }}
+            />
+          ) : (
+            <div
+              className="faint"
+              style={{
+                alignItems: 'center',
+                border: '1px dashed var(--border)',
+                borderRadius: 6,
+                display: 'flex',
+                fontSize: 12,
+                height: 108,
+                justifyContent: 'center',
+                width: 260,
+              }}
+            >
+              没设的话用渐变底
+            </div>
+          )}
+          <div className="mt-2 flex gap-2">
+            <label className="btn">
+              {uploading === 'cover' ? '上传中…' : aboutCoverUrl ? '换一张' : '上传封面'}
+              <input type="file" accept="image/*" hidden onChange={(e) => void onPickImage('cover', e)} />
+            </label>
+            {aboutCoverUrl && (
+              <button
+                className="btn btn--ghost"
+                onClick={() => {
+                  setAboutCoverUrl('')
+                  markDirty()
+                }}
+              >
+                移除
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>
+            头像（方图，页面上是圆的）
+          </div>
+          {aboutAvatarUrl ? (
+            <img
+              src={aboutAvatarUrl}
+              alt="关于页头像"
+              style={{ border: '1px solid var(--border)', borderRadius: '50%', height: 108, objectFit: 'cover', width: 108 }}
+            />
+          ) : (
+            <div
+              className="faint"
+              style={{
+                alignItems: 'center',
+                border: '1px dashed var(--border)',
+                borderRadius: '50%',
+                display: 'flex',
+                fontSize: 12,
+                height: 108,
+                justifyContent: 'center',
+                width: 108,
+              }}
+            >
+              没设用星标
+            </div>
+          )}
+          <div className="mt-2 flex gap-2">
+            <label className="btn">
+              {uploading === 'avatar' ? '上传中…' : aboutAvatarUrl ? '换一张' : '上传头像'}
+              <input type="file" accept="image/*" hidden onChange={(e) => void onPickImage('avatar', e)} />
+            </label>
+            {aboutAvatarUrl && (
+              <button
+                className="btn btn--ghost"
+                onClick={() => {
+                  setAboutAvatarUrl('')
+                  markDirty()
+                }}
+              >
+                移除
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
