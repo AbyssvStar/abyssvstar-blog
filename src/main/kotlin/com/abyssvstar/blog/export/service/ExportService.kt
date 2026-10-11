@@ -59,6 +59,8 @@ class ExportService(
                 title = config.title,
                 description = config.description,
                 aboutHtml = config.aboutHtml,
+                aboutCoverUrl = config.aboutCoverUrl,
+                aboutAvatarUrl = config.aboutAvatarUrl,
             ),
         )
 

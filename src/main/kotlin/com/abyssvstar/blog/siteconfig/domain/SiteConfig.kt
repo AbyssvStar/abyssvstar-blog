@@ -1,6 +1,7 @@
 package com.abyssvstar.blog.siteconfig.domain
 
 import com.baomidou.mybatisplus.annotation.FieldFill
+import com.baomidou.mybatisplus.annotation.FieldStrategy
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
@@ -28,6 +29,14 @@ data class SiteConfig(
     /** 关于页正文的 Markdown 原文。渲染发生在导出时，见 SiteConfigService */
     @TableField("about_md")
     var aboutMd: String = "",
+
+    // 两张图和 summary / cover_asset_id 一个道理：null 是有意义的（没设就是没有），
+    // 默认策略会把 null 从 UPDATE 里剔掉，「移除这张图」就会静默失效
+    @TableField(value = "about_cover_url", updateStrategy = FieldStrategy.IGNORED)
+    var aboutCoverUrl: String? = null,
+
+    @TableField(value = "about_avatar_url", updateStrategy = FieldStrategy.IGNORED)
+    var aboutAvatarUrl: String? = null,
 
     // fill 不能删：MyBatis-Plus 只在实体声明了 fill 时才会调用 AuditMetaObjectHandler
     @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)

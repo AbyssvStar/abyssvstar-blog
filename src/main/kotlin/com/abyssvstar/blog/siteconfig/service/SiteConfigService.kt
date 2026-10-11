@@ -34,6 +34,8 @@ class SiteConfigService(
             title = it.title,
             description = it.description,
             aboutHtml = markdown.render(it.aboutMd),
+            aboutCoverUrl = it.aboutCoverUrl,
+            aboutAvatarUrl = it.aboutAvatarUrl,
         )
     }
 
@@ -50,12 +52,19 @@ class SiteConfigService(
             title = request.title.trim(),
             description = request.description.trim(),
             aboutMd = request.aboutMarkdown,
+            // 空串按「没设」处理：后台清空输入框和点「移除」应该是一回事
+            aboutCoverUrl = request.aboutCoverUrl?.trim()?.ifEmpty { null },
+            aboutAvatarUrl = request.aboutAvatarUrl?.trim()?.ifEmpty { null },
         )
         if (!configs.save(after)) throw IllegalStateException("站点配置写入失败")
 
-        if (before.title != after.title || before.description != after.description || before.aboutMd != after.aboutMd) {
-            siteBuilds.requestBuild("site-config.updated")
-        }
+        val changed = before.title != after.title ||
+            before.description != after.description ||
+            before.aboutMd != after.aboutMd ||
+            before.aboutCoverUrl != after.aboutCoverUrl ||
+            before.aboutAvatarUrl != after.aboutAvatarUrl
+        // 只有真的改了才记构建：上传图之后顺手保存、结果什么都没变，不该让 CI 白跑
+        if (changed) siteBuilds.requestBuild("site-config.updated")
         return current().toResponse()
     }
 
@@ -67,6 +76,8 @@ class SiteConfigService(
         title = title,
         description = description,
         aboutMarkdown = aboutMd,
+        aboutCoverUrl = aboutCoverUrl,
+        aboutAvatarUrl = aboutAvatarUrl,
         updatedAt = updatedAt,
     )
 
@@ -75,9 +86,11 @@ class SiteConfigService(
     }
 }
 
-/** 导出接口要的那几样：站名、简介、关于页的 HTML（不是 Markdown 原文） */
+/** 导出接口要的那几样：站名、简介、关于页的 HTML（不是 Markdown 原文），以及那两张图 */
 data class SiteConfigExport(
     val title: String,
     val description: String,
     val aboutHtml: String,
+    val aboutCoverUrl: String?,
+    val aboutAvatarUrl: String?,
 )
