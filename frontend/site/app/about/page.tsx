@@ -59,8 +59,8 @@ export default async function AboutPage() {
           <AboutProfile
             avatarUrl={config.aboutAvatarUrl || undefined}
             name={config.title}
-            tagline={site.intro}
-            repo={site.repo}
+            tagline={site.aboutTagline}
+            github={site.github}
           />
 
           {html ? (
@@ -76,16 +76,7 @@ export default async function AboutPage() {
         </div>
 
         <p className="about-hint">
-          右下角有个终端（快捷键 <kbd>~</kbd>）—— 也可以试试 <kbd>↑</kbd>
-          <kbd>↑</kbd>
-          <kbd>↓</kbd>
-          <kbd>↓</kbd>
-          <kbd>←</kbd>
-          <kbd>→</kbd>
-          <kbd>←</kbd>
-          <kbd>→</kbd>
-          <kbd>B</kbd>
-          <kbd>A</kbd>
+          右下角有个终端（快捷键 <kbd>~</kbd>）哦
         </p>
       </div>
 

@@ -12,12 +12,12 @@ export function AboutProfile({
   avatarUrl,
   name,
   tagline,
-  repo,
+  github,
 }: {
   avatarUrl?: string
   name: string
   tagline: string
-  repo: string
+  github: string
 }) {
   const [spins, setSpins] = useState(0)
   const [spinning, setSpinning] = useState(false)
@@ -51,11 +51,8 @@ export function AboutProfile({
       <p className="about-tagline">{eggFound ? '你点了五下。那我也认真一点：写下去就对了。' : tagline}</p>
 
       <div className="about-links">
-        <a href={repo} target="_blank" rel="noreferrer" aria-label="GitHub">
+        <a href={github} target="_blank" rel="noreferrer" aria-label="GitHub">
           <GitHubMark />
-        </a>
-        <a href="/rss.xml" aria-label="RSS 订阅">
-          <RssMark />
         </a>
       </div>
     </div>
@@ -85,13 +82,3 @@ function GitHubMark() {
   )
 }
 
-function RssMark() {
-  return (
-    <svg className="about-links__icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M6.18 15.64a2.18 2.18 0 1 1 0 4.36 2.18 2.18 0 0 1 0-4.36ZM4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44Zm0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z"
-      />
-    </svg>
-  )
-}
