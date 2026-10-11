@@ -121,14 +121,23 @@ export interface SiteConfig {
   title: string
   description: string
   aboutMarkdown: string
+  /** 关于页的封面图 / 头像（media 地址）。没设就是 undefined */
+  aboutCoverUrl?: string
+  aboutAvatarUrl?: string
   updatedAt?: string
 }
 
-/** PUT /site-config 的请求体。保存就是上线动作，没有单独的「发布」。 */
+/**
+ * PUT /site-config 的请求体。保存就是上线动作，没有单独的「发布」。
+ *
+ * 后端按**整份替换**处理：这两个图字段传空串就等于「移除那张图」。
+ */
 export interface UpdateSiteConfigBody {
   title: string
   description: string
   aboutMarkdown: string
+  aboutCoverUrl: string
+  aboutAvatarUrl: string
 }
 
 /** 一条静态站构建记录 */

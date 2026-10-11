@@ -1,7 +1,11 @@
 import type { Metadata } from 'next'
-import { transformPostHtml } from '@/lib/markdown'
 import { CodeCopy } from '@/components/CodeCopy'
-import { getSiteConfig } from '@/lib/content'
+import { AboutProfile } from '@/components/AboutProfile'
+import { HiddenTerminal } from '@/components/HiddenTerminal'
+import { KonamiEgg } from '@/components/KonamiEgg'
+import { getPosts, getSiteConfig } from '@/lib/content'
+import { transformPostHtml } from '@/lib/markdown'
+import { site } from '@/lib/site'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { description } = await getSiteConfig()
@@ -13,28 +17,80 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
+ * 正文里若自带一级标题就去掉：页头已经有一个「关于我」了，两个一级标题只会打架。
+ * 只削开头那一个，正文中间的小标题不动。
+ */
+function stripLeadingH1(html: string): string {
+  return html.replace(/^\s*<h1[\s\S]*?<\/h1>\s*/, '')
+}
+
+/**
  * 关于页。
  *
- * 正文在后台的「站点」页里写（Markdown），导出时已由后端渲染成 HTML —— 和文章正文是
- * 同一种东西，所以这里走的是同一段构建期处理：补标题锚点、用 Shiki 给代码上色。
+ * 版式是「大图 banner + 圆头像压边 + 一张大卡」：正文仍然来自后台的站点配置（Markdown，
+ * 导出时已渲染成 HTML），这里只做两件事 —— 补标题锚点与代码配色，以及把内容摆进这套骨架里。
+ *
+ * 页面上还挂着两个玩的东西：头像（点它）和右下角的终端（按 ~）。都是客户端的，静态产物不变。
  */
 export default async function AboutPage() {
-  const { aboutHtml } = await getSiteConfig()
-  // 正文里已经有 H1 就不再补一个，免得出现两个标题
-  const hasOwnTitle = /<h1[\s>]/.test(aboutHtml)
-  const { html } = aboutHtml.trim() ? await transformPostHtml(aboutHtml) : { html: '' }
+  const [config, posts] = await Promise.all([getSiteConfig(), getPosts()])
+  const body = stripLeadingH1(config.aboutHtml).trim()
+  const { html } = body ? await transformPostHtml(body) : { html: '' }
 
   return (
-    <div className="wrap" style={{ maxWidth: '46rem', padding: '3rem 0 4rem' }}>
-      {!hasOwnTitle && <h1 style={{ fontSize: '1.9rem' }}>关于</h1>}
-      {html ? (
-        <>
-          <div className="md-body" id="about-body" dangerouslySetInnerHTML={{ __html: html }} />
-          <CodeCopy containerId="about-body" />
-        </>
-      ) : (
-        <p className="faint">关于页还空着 —— 后台的「站点」页可以写它。</p>
-      )}
-    </div>
+    <>
+      <section className="about-hero">
+        {config.aboutCoverUrl ? (
+          // 封面图是后台传的 media 地址；静态导出没有图片优化服务，所以直接铺
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="about-hero__cover" src={config.aboutCoverUrl} alt="" />
+        ) : (
+          <div className="about-hero__fallback" aria-hidden="true" />
+        )}
+        <div className="about-hero__veil" aria-hidden="true" />
+
+        <h1 className="about-hero__title">
+          <span className="about-hero__typed">关于我</span>
+        </h1>
+      </section>
+
+      <div className="wrap about-wrap">
+        <div className="about-shell">
+          <AboutProfile
+            avatarUrl={config.aboutAvatarUrl || undefined}
+            name={config.title}
+            tagline={site.intro}
+            repo={site.repo}
+          />
+
+          {html ? (
+            <>
+              <div className="md-body about-body" id="about-body" dangerouslySetInnerHTML={{ __html: html }} />
+              <CodeCopy containerId="about-body" />
+            </>
+          ) : (
+            <p className="faint" style={{ textAlign: 'center' }}>
+              关于页还空着 —— 后台的「站点」页可以写它。
+            </p>
+          )}
+        </div>
+
+        <p className="about-hint">
+          右下角有个终端（快捷键 <kbd>~</kbd>）—— 也可以试试 <kbd>↑</kbd>
+          <kbd>↑</kbd>
+          <kbd>↓</kbd>
+          <kbd>↓</kbd>
+          <kbd>←</kbd>
+          <kbd>→</kbd>
+          <kbd>←</kbd>
+          <kbd>→</kbd>
+          <kbd>B</kbd>
+          <kbd>A</kbd>
+        </p>
+      </div>
+
+      <KonamiEgg />
+      <HiddenTerminal posts={posts.map((post) => ({ slug: post.slug, title: post.title }))} />
+    </>
   )
 }
