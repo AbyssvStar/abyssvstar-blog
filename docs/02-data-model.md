@@ -242,6 +242,8 @@ CREATE UNIQUE INDEX assets_sha_uq ON assets (sha256) WHERE deleted_at IS NULL;
 | `title` | text NOT NULL | 站名。页头、页脚、浏览器标签栏都用它 |
 | `description` | text NOT NULL | SEO 与社交卡片的一句话 |
 | `about_md` | text NOT NULL DEFAULT `''` | 关于页正文的 **Markdown 原文** |
+| `about_cover_url` | text | 关于页封面图（media 地址，可空） |
+| `about_avatar_url` | text | 关于页头像（media 地址，可空） |
 | `updated_at` | timestamptz NOT NULL DEFAULT now() | |
 
 **只装「作者手写的站点级文字」。** 导航、许可、背景图那些改了要连着改模板的常量，仍然留在公开站代码里 ——
@@ -251,6 +253,12 @@ CREATE UNIQUE INDEX assets_sha_uq ON assets (sha256) WHERE deleted_at IS NULL;
 好处是公开站不需要带 Markdown 解析器，标题锚点、代码配色也走和文章正文完全相同的那段构建期处理。
 
 保存即上线：内容真的变了才记一条 `PENDING`，由防抖任务合并成一次构建（见 `04-domain-rules.md` 的构建触发一节）。
+两列图片存的是 URL 快照而不是 `assets` 外键：换图就是换一个地址，不值得为「这张图属于站点配置」再加一张关联表。
+
+**关于页的版式不在正文里**。作者写的是 Markdown，站点负责套上「大图 banner + 圆头像 + 一张大卡」这套骨架
+（在 `frontend/site/app/about/page.tsx`）。理由：正文里手写 `<style>` 会把颜色写死、在亮暗两个主题下都错，
+而且站点的 class 名一旦被作者的 HTML 撞上就互相破坏。正文里写 HTML 是允许的，但站点自己的类名统一带
+`about-` / `term-` 前缀，撞车时能一眼看出是谁的。
 
 ---
 
@@ -267,6 +275,7 @@ CREATE UNIQUE INDEX assets_sha_uq ON assets (sha256) WHERE deleted_at IS NULL;
 | `V7__trgm_fallback.sql` | `CREATE EXTENSION pg_trgm` + 降级搜索索引 |
 | `V8__job_indexes.sql` | 定时发布扫描索引、ES 补偿索引 |
 | `V9__site_config.sql` | `site_config`（单行，含首行种子配置） |
+| `V10__site_config_about_images.sql` | `site_config` 加关于页的封面图 / 头像两列 |
 
 > 后续迁移**只增不改**：已应用的迁移文件永不修改，结构变更一律新开 `V{n+1}`。
 
