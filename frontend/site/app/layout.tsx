@@ -40,7 +40,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const config = await getSiteConfig()
-  // 主题不靠脚本抢跑：没写 data-theme 就跟随系统偏好，写了就照写的来（见 globals.css 的令牌一节）
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body>
