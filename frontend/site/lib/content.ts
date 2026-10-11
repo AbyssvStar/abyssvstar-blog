@@ -34,6 +34,9 @@ export interface ExportSiteConfig {
   description: string
   /** 关于页正文。后端渲染好的 HTML，和文章正文是同一种东西 */
   aboutHtml: string
+  /** 关于页的封面图与头像（media 地址）；没设就是空 */
+  aboutCoverUrl?: string
+  aboutAvatarUrl?: string
 }
 
 export interface ExportPayload {
@@ -155,6 +158,8 @@ export async function getSiteConfig(): Promise<ExportSiteConfig> {
     title: siteConfig?.title?.trim() || site.title,
     description: siteConfig?.description?.trim() || site.description,
     aboutHtml: siteConfig?.aboutHtml ?? '',
+    aboutCoverUrl: siteConfig?.aboutCoverUrl ?? '',
+    aboutAvatarUrl: siteConfig?.aboutAvatarUrl ?? '',
   }
 }
 
