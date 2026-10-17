@@ -103,7 +103,7 @@ jobs:
           key: site-etag-${{ github.run_id }}
 
       - name: 失败告警
-        if: failure() && secrets.FEISHU_WEBHOOK != ''
+        if: failure() && env.WEBHOOK != ''
         env:
           WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
         run: |
