@@ -44,14 +44,16 @@ export default async function AboutPage() {
 
   return (
     <>
-      <section className="about-hero">
-        {config.aboutCoverUrl ? (
-          // 封面图是后台传的 media 地址；静态导出没有图片优化服务，所以直接铺
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="about-hero__cover" src={config.aboutCoverUrl} alt="" />
-        ) : (
-          <div className="about-hero__fallback" aria-hidden="true" />
-        )}
+      <section className="about-hero" data-cover={config.aboutCoverUrl ? 'true' : 'false'}>
+        {/*
+          封面不做成 <img>：后台传来的是一个图床地址，图床挂了就是浏览器的破图图标。
+          做成这一层的 background-image，404 时它只是不画，底下那层渐变自己顶上来。
+        */}
+        <div
+          className="about-hero__fallback"
+          aria-hidden="true"
+          style={config.aboutCoverUrl ? { backgroundImage: `url("${config.aboutCoverUrl}")` } : undefined}
+        />
         <div className="about-hero__veil" aria-hidden="true" />
 
         <h1 className="about-hero__title">

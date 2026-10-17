@@ -76,7 +76,14 @@ export function GalaxyBackground() {
     const starCtx = starCanvas.getContext('2d')
     if (!warpCtx || !dustCtx || !starCtx) return
 
-    const colors = readTokens()
+    // 令牌是 light-dark() 编出来的，切主题后 computed 值会变 —— 颜色得跟着重读，否则星野还是旧主题的色
+    let colors = readTokens()
+    const themeObserver = new MutationObserver(() => {
+      colors = readTokens()
+      buildStarSprites()
+    })
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+
     const toRgb = (hex: string): string => {
       const normalized = hex.replace('#', '')
       const value = Number.parseInt(normalized, 16)
@@ -93,6 +100,36 @@ export function GalaxyBackground() {
     const starCountLevel = 0.2
     const starSpeedLevel = 0.0005
 
+    /**
+     * 星点的光晕贴图（每种星色一张）。
+     *
+     * 原来用 `arc()` 画圆点 + `shadowBlur` 做光晕。shadowBlur 是 canvas 里最贵的操作，
+     * 而且在这台机器的软件光栅下会画出莫名其妙的细折线（浅色主题下最明显：
+     * 深色背景把那些痕迹吃掉了，白底上就露出来）。换成预渲染的径向渐变贴图，
+     * 便宜、可控，也没有这个毛病。主题切换时重建一次（颜色来自令牌）。
+     */
+    let starSprites: HTMLCanvasElement[] = []
+    const buildStarSprites = () => {
+      starSprites = starColorList().map((color) => {
+        const size = 32
+        const canvas = document.createElement('canvas')
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+          gradient.addColorStop(0, withAlpha(color, 1))
+          gradient.addColorStop(0.26, withAlpha(color, 0.62))
+          gradient.addColorStop(0.58, withAlpha(color, 0.16))
+          gradient.addColorStop(1, withAlpha(color, 0))
+          ctx.fillStyle = gradient
+          ctx.fillRect(0, 0, size, size)
+        }
+        return canvas
+      })
+    }
+    buildStarSprites()
+
     let width = 0
     let height = 0
     let focalDistance = 0
@@ -101,6 +138,17 @@ export function GalaxyBackground() {
     let starRaf = 0
     let lastStarDraw = 0
 
+    /**
+     * 星点半径上限（CSS 像素）。
+     *
+     * 透视投影的 `focalDistance / star.z` 在 z→0 时发散，半径能涨到上千像素；视口里只落得下
+     * 那一小段圆的边缘，看起来就是一道不知从哪来的细弧线（浅色主题用普通混合，最明显）。
+     * 按像素密度算过的实际直径也就 3–4px，超过上限的一律当「擦身而过」，重生。
+     */
+    const MAX_STAR_RADIUS = 7
+    // 整屏都在视口外时停掉绘制（rAF 本身由浏览器在标签页隐藏时处理，滚动出去不会）
+    let heroVisible = true
+
     const createStar = (): Star => ({
       x: width * (0.1 + 0.8 * random()),
       y: height * (0.1 + 0.8 * random()),
@@ -108,12 +156,26 @@ export function GalaxyBackground() {
       color: Math.ceil(random() * 1000) % starColorList().length,
     })
 
+    /**
+     * 背板按 CSS 尺寸 × devicePixelRatio 配，再把绘制坐标缩放到 CSS 像素。
+     *
+     * 之前直接拿 clientWidth 当背板宽，等于按 1x 画：高分屏上星点和连线的边缘是糊的、圆的会变方。
+     */
+    const fitCanvas = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
+      const rect = canvas.getBoundingClientRect()
+      const w = rect.width || canvas.clientWidth || 1
+      const h = rect.height || canvas.clientHeight || 1
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      canvas.width = Math.max(1, Math.floor(w * dpr))
+      canvas.height = Math.max(1, Math.floor(h * dpr))
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      return { w, h }
+    }
+
     const resizeStarry = () => {
-      warpCtx.clearRect(0, 0, warpCanvas.width, warpCanvas.height)
-      warpCanvas.width = warpCanvas.clientWidth
-      warpCanvas.height = warpCanvas.clientHeight
-      width = warpCanvas.clientWidth
-      height = warpCanvas.clientHeight
+      const size = fitCanvas(warpCanvas, warpCtx)
+      width = size.w
+      height = size.h
       focalDistance = width * focalDistanceLevel
       const count = Math.ceil(width * starCountLevel)
       if (starList.length > count) {
@@ -126,6 +188,7 @@ export function GalaxyBackground() {
 
     const renderStarry = () => {
       starRaf = window.requestAnimationFrame(renderStarry)
+      if (!heroVisible) return
       // 每 2 帧画一次就够（参考实现就是这么省的）
       const now = performance.now()
       if (now - lastStarDraw < 32) return
@@ -135,28 +198,27 @@ export function GalaxyBackground() {
       warpCtx.clearRect(0, 0, width, height)
       const starSpeed = width * focalDistanceLevel * starSpeedLevel
       for (const star of starList) {
-        const starX = ((star.x - width / 2) * (focalDistance / star.z)) + width / 2
-        const starY = ((star.y - height / 2) * (focalDistance / star.z)) + height / 2
+        const scale = focalDistance / star.z
+        const starX = ((star.x - width / 2) * scale) + width / 2
+        const starY = ((star.y - height / 2) * scale) + height / 2
         star.z -= starSpeed
         if (
           star.z > 0 &&
           star.z <= focalDistance &&
+          starRadius * scale * 0.8 <= MAX_STAR_RADIUS &&
           starX >= -20 &&
           starX <= width + 20 &&
           starY >= -20 &&
           starY <= height + 20
         ) {
-          const radius = starRadius * ((focalDistance / star.z) * 0.8)
+          const radius = starRadius * scale * 0.8
           const opacity = 1 - 0.8 * (star.z / focalDistance)
-          const color = starColorList()[star.color]
-          warpCtx.fillStyle = withAlpha(color, opacity)
-          warpCtx.shadowOffsetX = 0
-          warpCtx.shadowOffsetY = 0
-          warpCtx.shadowColor = color
-          warpCtx.shadowBlur = 10
-          warpCtx.beginPath()
-          warpCtx.arc(starX, starY, radius, 0, TAU)
-          warpCtx.fill()
+          const sprite = starSprites[star.color]
+          // 贴图比本体大几倍，那一圈渐变就是光晕
+          const size = Math.max(radius * 6, 2.5)
+          warpCtx.globalAlpha = opacity
+          warpCtx.drawImage(sprite, starX - size / 2, starY - size / 2, size, size)
+          warpCtx.globalAlpha = 1
         } else {
           star.x = width * (0.1 + 0.8 * random())
           star.y = height * (0.1 + 0.8 * random())
@@ -175,6 +237,15 @@ export function GalaxyBackground() {
     let stopGalaxy: (() => void) | null = null
     if (!coarse) stopGalaxy = startGalaxy()
 
+    // 滚到下面的文章列表时，星野和星系没必要继续满速跑
+    const visibility = new IntersectionObserver(
+      (entries) => {
+        heroVisible = entries.some((entry) => entry.isIntersecting)
+      },
+      { threshold: 0 },
+    )
+    visibility.observe(warpCanvas)
+
     const onResize = () => {
       resizeStarry()
     }
@@ -182,6 +253,8 @@ export function GalaxyBackground() {
 
     return () => {
       window.removeEventListener('resize', onResize)
+      themeObserver.disconnect()
+      visibility.disconnect()
       window.cancelAnimationFrame(starRaf)
       stopGalaxy?.()
     }
@@ -194,11 +267,15 @@ export function GalaxyBackground() {
 
       // 只有尘埃层与星层随窗口改尺寸；#star-bg 是常驻星野，由上面那部分自己管
       const canvases = [dustCanvas!, starCanvas!]
+      // 画布的 CSS 盒子是 hero 的 100%×100%（= 视口宽 × 视口高 − 顶栏），所以要按自己的 rect 配背板。
+      // 之前用 innerWidth/innerHeight：既没按 dpr 缩放，高度还差 60px，画出来的圆是竖着压扁的。
+      let galaxyW = 1
+      let galaxyH = 1
       const sizeCanvas = () => {
-        for (const c of canvases) {
-          c.width = window.innerWidth
-          c.height = window.innerHeight
-        }
+        const dustSize = fitCanvas(dustCanvas!, ctxDust)
+        fitCanvas(starCanvas!, ctxStar)
+        galaxyW = dustSize.w
+        galaxyH = dustSize.h
       }
       sizeCanvas()
       // 两层都用普通混合：加色混合（lighter）在这套画法里会出事 ——
@@ -208,7 +285,7 @@ export function GalaxyBackground() {
       ctxStar.globalCompositeOperation = 'source-over'
 
       const galaxies: Galaxy[] = []
-      const mouse = { pos: { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5 }, speed: 0 }
+      const mouse = { pos: { x: galaxyW * 0.5, y: galaxyH * 0.5 }, speed: 0 }
       let currentGalaxy: Galaxy | null = null
       let drawingMode = false
       let drawRaf = 0
@@ -320,10 +397,10 @@ export function GalaxyBackground() {
         // 参考实现是往上涂低透明度底色 —— 在深色底上会留下洗不掉的脏印，也盖住了星野。
         ctxDust.globalCompositeOperation = 'destination-out'
         ctxDust.fillStyle = 'rgba(0, 0, 0, 0.22)'
-        ctxDust.fillRect(0, 0, dustCanvas!.width, dustCanvas!.height)
+        ctxDust.fillRect(0, 0, galaxyW, galaxyH)
         ctxDust.globalCompositeOperation = 'source-over'
 
-        ctxStar.clearRect(0, 0, starCanvas!.width, starCanvas!.height)
+        ctxStar.clearRect(0, 0, galaxyW, galaxyH)
         // 半透明 + shadowBlur 归零：不然（尤其叠加 lighter 时）光点会晃眼
         ctxStar.shadowBlur = 0
         ctxStar.fillStyle = withAlpha(colors.ocean, 0.72)
@@ -391,18 +468,24 @@ export function GalaxyBackground() {
 
       const loop = () => {
         drawRaf = window.requestAnimationFrame(loop)
+        // 滚到下面的文章列表时，星系层没必要继续每帧擦除 + 重画
+        if (!heroVisible) return
         draw()
         update()
         render()
       }
 
+      /** 事件是不是落在画布上。画布的 CSS 盒子与视口不等价，所以坐标只能用它自己的 offsetX/Y。 */
+      const onCanvas = (event: MouseEvent) =>
+        (event.target as HTMLElement | null)?.tagName === 'CANVAS'
+
       const activateDraw = (event: MouseEvent) => {
         // 只有点在画布上才算开始（点链接、按钮不会触发）
-        if ((event.target as HTMLElement | null)?.tagName !== 'CANVAS') return
+        if (!onCanvas(event)) return
         drawingMode = true
-        mouse.pos.x = event.clientX
-        mouse.pos.y = event.clientY
-        currentGalaxy = newGalaxy(event.clientX, event.clientY)
+        mouse.pos.x = event.offsetX
+        mouse.pos.y = event.offsetY
+        currentGalaxy = newGalaxy(event.offsetX, event.offsetY)
         galaxies.push(currentGalaxy)
       }
 
@@ -412,9 +495,12 @@ export function GalaxyBackground() {
       }
 
       const moveEvent = (event: MouseEvent) => {
-        mouse.speed = distance2({ x: event.clientX, y: event.clientY }, { x: mouse.pos.x, y: mouse.pos.y })
-        mouse.pos.x = event.clientX
-        mouse.pos.y = event.clientY
+        // 指针已经离开画布（拖到顶栏或下面的文章区）就别再往里撒星
+        if (!onCanvas(event)) return
+        // 之前直接拿 clientX/clientY 当画布坐标：画布并不在视口原点，整个星系会偏到光标下方
+        mouse.speed = distance2({ x: event.offsetX, y: event.offsetY }, { x: mouse.pos.x, y: mouse.pos.y })
+        mouse.pos.x = event.offsetX
+        mouse.pos.y = event.offsetY
         // 鼠标移动时每 2 帧才抛一次
         moveFrameCount = (moveFrameCount + 1) % 2
         if (moveFrameCount === 0) draw()
