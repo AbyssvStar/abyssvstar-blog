@@ -2042,3 +2042,239 @@ button.chip:disabled {
     display: none;
   }
 }
+
+/* ---------- 窄屏顶栏 / 图片兜底 / 标题层级 ---------- */
+
+.nav-toggle {
+  background: none;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: none;
+  flex: none;
+  height: 2.1rem;
+  margin-left: auto;
+  padding: 0.3rem;
+  transition: border-color 0.15s, color 0.15s;
+  width: 2.1rem;
+}
+
+.nav-toggle svg {
+  height: 100%;
+  width: 100%;
+}
+
+.nav-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* 主题开关：图标按钮，替掉原来那个写着「暗 / 亮」的方按钮 */
+.theme-toggle {
+  align-items: center;
+  background: none;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  height: 1.95rem;
+  justify-content: center;
+  margin-left: 0.4rem;
+  padding: 0.3rem;
+  transition: border-color 0.15s, color 0.15s;
+  width: 1.95rem;
+}
+
+.theme-toggle svg {
+  height: 100%;
+  width: 100%;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 当前页只留 pill 底色，去掉下面那条下划线 —— 两套指示叠在一起太忙 */
+.nav__link[data-active='true']::after {
+  width: 0;
+}
+
+@media (max-width: 48rem) {
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  /* 面板挂在 .header 上（sticky 也是定位元素），所以能铺满整条宽度 */
+  .nav {
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    align-items: stretch;
+    backdrop-filter: blur(14px) saturate(150%);
+    background: color-mix(in srgb, var(--bg) 96%, transparent);
+    border-bottom: 1px solid var(--border-soft);
+    display: none;
+    flex-direction: column;
+    gap: 0.1rem;
+    left: 0;
+    margin-left: 0;
+    padding: 0.6rem 1.25rem 0.9rem;
+    position: absolute;
+    right: 0;
+    top: 100%;
+  }
+
+  .nav[data-open='true'] {
+    display: flex;
+  }
+
+  .nav__link {
+    border-radius: 8px;
+    padding: 0.55rem 0.7rem;
+  }
+
+  /* 面板里「下划线扫出」没有意义，改用左侧一条 accent 竖线标当前页 */
+  .nav__link::after {
+    display: none;
+  }
+
+  .nav__link[data-active='true'] {
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+
+  .theme-toggle {
+    align-self: flex-start;
+    margin: 0.45rem 0 0 0.15rem;
+  }
+}
+
+/* 触屏没有「左键」，这半句提示在手机上永远无法完成（但「最近更新」要留着） */
+@media (pointer: coarse) {
+  .hero-hint__drag {
+    display: none;
+  }
+}
+
+/* ---------- 图片兜底：加载失败时不能露出浏览器那个破图图标 ---------- */
+
+.img-fallback {
+  background: var(--bg-elevated);
+  /* 兜底是一个 <span>：不设 display 的话 aspect-ratio / height 对它是无效的 */
+  display: block;
+  overflow: hidden;
+  position: relative;
+}
+
+.img-fallback::after {
+  background: url('/img/broken.png') center / contain no-repeat;
+  content: '';
+  inset: 0;
+  opacity: 0.5;
+  position: absolute;
+}
+
+/* 占位图本身是浅灰底：暗色主题下反相，否则是一块刺眼的白方块 */
+:root:not([data-theme='light']) .img-fallback::after {
+  filter: invert(1);
+  opacity: 0.28;
+}
+
+/* .scroll-zoom 是定高的，兜底层要自己撑满（<img> 靠 .scroll-zoom img 那条撑） */
+.scroll-zoom .img-fallback {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+/* ---------- 正文标题层级：页面标题必须始终高于正文里的一级标题 ---------- */
+
+.md-body h1 {
+  font-size: 1.45rem;
+}
+
+/* 正文开头的 h1 紧跟在页面标题下面，再加一条分隔线就是双线 */
+.md-body > h1:first-child {
+  border-top: 0;
+  margin-top: 0.8rem;
+  padding-top: 0;
+}
+
+/* ---------- 关于页正文：那是一段自我介绍，不是一篇文档 ---------- */
+
+.about-body {
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.95;
+}
+
+/* 卡片里的一级标题是口号级别的句子：给语气，但不要文档标题的体量 */
+.about-body h1 {
+  border-top: 0;
+  color: var(--text);
+  font-size: 1.3rem;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  margin-top: 2.2rem;
+  padding-top: 0;
+}
+
+.about-body h2 {
+  border-top: 0;
+  color: var(--text);
+  font-size: 1.05rem;
+  margin-top: 1.9rem;
+  padding-top: 0;
+}
+
+/* 小节之间用一小段 accent 细线，代替横贯整行的分隔线 */
+.about-body h2::before {
+  background: var(--accent);
+  content: '';
+  display: block;
+  height: 1px;
+  margin: 0 auto 0.9rem;
+  opacity: 0.45;
+  width: 1.5rem;
+}
+
+.about-body h3,
+.about-body h4 {
+  color: var(--text);
+  font-size: 1rem;
+  margin-top: 1.5rem;
+}
+
+.about-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- 关于页 banner：底色挪到容器上，照片只做覆盖层 ---------- */
+
+.about-hero {
+  background:
+    radial-gradient(48rem 22rem at 16% 0%, var(--accent-soft), transparent 62%),
+    radial-gradient(36rem 18rem at 88% 12%, color-mix(in srgb, var(--aqua) 22%, transparent), transparent 60%),
+    linear-gradient(160deg, var(--bg-elevated), var(--bg));
+}
+
+/* 有照片时用 inline background-image 覆盖；照片 404 时这两条只是不画，底下那层渐变还在 */
+.about-hero__fallback {
+  background-position: center;
+  background-size: cover;
+  inset: 0;
+  position: absolute;
+}
+
+/* 照片是一层盖上去的，所以没图就别压那层深色纱 —— 浅色主题下它就是一片浑浊的灰 */
+.about-hero[data-cover='false'] .about-hero__veil {
+  background: linear-gradient(to bottom, transparent 55%, var(--bg));
+}
+
+/* 没图时标题不能用白色：浅色主题下白字落在近白的渐变上，等于看不见 */
+.about-hero[data-cover='false'] .about-hero__title {
+  color: var(--text);
+  text-shadow: none;
+}

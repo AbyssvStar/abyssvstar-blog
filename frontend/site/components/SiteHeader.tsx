@@ -9,6 +9,7 @@ import { site } from '@/lib/site'
 export function SiteHeader({ title }: { title: string }) {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // 滚动后才出现那条细边框：静止时页面是「无边界」的
   useEffect(() => {
@@ -18,15 +19,44 @@ export function SiteHeader({ title }: { title: string }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // 换页就把菜单收起来，否则点完链接面板还挂在那儿
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
+
   return (
-    <header className="header" data-scrolled={scrolled}>
+    <header className="header" data-scrolled={scrolled} data-menu={menuOpen}>
       <div className="wrap header__inner">
         <Link href="/" className="brand" aria-label={title}>
           <StarMark />
           {title}
         </Link>
 
-        <nav className="nav">
+        {/*
+          窄屏顶栏放不下「品牌 + 四项导航 + 主题开关」，之前是直接溢出、把「关于」和开关裁掉。
+          这里收成一个菜单按钮，展开后是一块铺满宽度的下拉面板（见 globals.css 的 .nav 窄屏规则）。
+        */}
+        <button
+          type="button"
+          className="nav-toggle"
+          aria-expanded={menuOpen}
+          aria-controls="site-nav"
+          aria-label={menuOpen ? '收起菜单' : '展开菜单'}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <MenuIcon open={menuOpen} />
+        </button>
+
+        <nav className="nav" id="site-nav" data-open={menuOpen}>
           {site.nav.map((item) => (
             <Link
               key={item.href}
@@ -84,9 +114,12 @@ function ThemeToggle() {
     setTheme(next)
   }
 
+  // 图标表示「点了会切到哪儿」：暗色下给太阳，浅色下给月亮
+  const label = theme === 'dark' ? '切换到浅色' : '切换到深色'
+
   return (
-    <button type="button" className="btn" onClick={toggle} aria-label="切换主题" style={{ marginLeft: '0.35rem' }}>
-      {theme === 'dark' ? '暗' : '亮'}
+    <button type="button" className="theme-toggle" onClick={toggle} aria-label={label} title={label}>
+      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
     </button>
   )
 }
@@ -100,6 +133,47 @@ function StarMark() {
         fill="currentColor"
       />
       <circle cx="18.6" cy="18.4" r="1.5" fill="currentColor" opacity=".55" />
+    </svg>
+  )
+}
+
+function MenuIcon({ open }: { open: boolean }) {
+  // 两条线开合：中间那条没画，所以合起来像「≡」、展开像「×」，比重画一套图标省事
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        d={open ? 'M4 4 L16 16 M16 4 L4 16' : 'M3 6 H17 M3 13 H17'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <g stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+        <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2" />
+        <path d="M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6" />
+      </g>
+    </svg>
+  )
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
