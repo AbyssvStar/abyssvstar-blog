@@ -44,9 +44,61 @@
   color-scheme: dark;
 }
 
+/*
+ * 粒子配色：**故意不用 light-dark()**。
+ *
+ * tsParticles 的配色是在 JS 里读 CSS 自定义属性拼出来的，而 light-dark() 编译后是一段
+ * 拼接表达式 —— `getComputedStyle` 拿到的不保证是单个合法颜色。拿到非法值时库会退回它
+ * 自己的默认色（白色），表现就是「浅色主题下粒子是白的、几乎看不见」。
+ * 所以给粒子单独一组纯十六进制令牌，两套主题各写一遍。
+ */
+:root {
+  --particle-a: #6ea8fe;
+  --particle-b: #8ec5ff;
+  --particle-c: #e8e8ea;
+}
+
+:root[data-theme='light'] {
+  --particle-a: #2563eb;
+  --particle-b: #0e7490;
+  --particle-c: #64748b;
+}
+
+/*
+ * 展示字体：Space Grotesk，只带拉丁子集（每个字重约 13KB）。
+ *
+ * 中文一个字节都没加载 —— 中日韩文会落到 --font-sans 的系统栈里，
+ * 所以「英文有性格、中文不拖慢首屏」这两件事能同时成立。
+ * 随包自托管：构建期不去问 Google Fonts，国内 CI 也能构建。
+ */
+@font-face {
+  font-display: swap;
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/space-grotesk-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  src: url('/fonts/space-grotesk-latin-500-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/space-grotesk-latin-700-normal.woff2') format('woff2');
+}
+
 :root {
   --font-sans: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: 'Space Grotesk', var(--font-sans);
   --maxw: 66rem;
   --readw: 46rem;
 }
@@ -2277,4 +2329,83 @@ button.chip:disabled {
 .about-hero[data-cover='false'] .about-hero__title {
   color: var(--text);
   text-shadow: none;
+}
+
+/* ---------- 首页中心物：展示字体 + 逐字入场 + 指针视差 ---------- */
+
+.hero-stage__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+
+/* 视差只作用在这一层：外层 h1 还要留给滚动飞走用 */
+.hero-stage__title-inner {
+  display: inline-block;
+  transform: translate3d(var(--px, 0), var(--py, 0), 0);
+}
+
+.hero-stage__char {
+  animation: hero-char-in 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 52ms);
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+@keyframes hero-char-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.36em) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 大写等宽小字，替掉原来那根 2px 短横线 */
+.hero-stage__kicker {
+  align-items: center;
+  color: var(--text-faint);
+  display: inline-flex;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  gap: 0.6rem;
+  letter-spacing: 0.24em;
+  margin-bottom: 1.15rem;
+  text-transform: uppercase;
+}
+
+.hero-stage__kicker::before {
+  background: var(--accent);
+  content: '';
+  height: 1px;
+  width: 1.5rem;
+}
+
+/* 数字用等宽数字对位：状态更像仪表，滚动变化时也不会左右跳 */
+.stats__num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 展示字体只作用于拉丁字母；中文自动落回系统栈，不会变样 */
+.about-name {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.article__title {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-stage__char {
+    animation: none;
+  }
+
+  .hero-stage__title-inner {
+    transform: none;
+  }
 }
