@@ -1,0 +1,111 @@
+name: deploy-site
+
+# 静态产物的部署流水线（见 docs/08 的 CI/CD 契约）。
+#
+# 三种触发：
+#   1. repository_dispatch(site-rebuild)：后端发布内容时
+#   2. workflow_dispatch：手动（改了站点代码、或第一次上线）
+#   3. 定时每 30 分钟兜底：dispatch 会因为网络抖动/限流丢掉，靠它补
+#
+# 定时那次先比 ETag：内容没变就整段跳过（构建和 rsync 都不跑），几乎零成本。
+
+on:
+  repository_dispatch:
+    types: [site-rebuild]
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+env:
+  EXPORT_URL: ${{ vars.EXPORT_URL || 'https://abyssvstar.cloud/api/v1/export' }}
+  SITE_URL: ${{ vars.SITE_URL || 'https://abyssvstar.cloud' }}
+  EXPORT_TOKEN: ${{ secrets.EXPORT_TOKEN }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/site/package-lock.json
+
+      - name: 取回上次的 ETag
+        uses: actions/cache/restore@v4
+        with:
+          path: .etag
+          key: site-etag-${{ github.run_id }}
+          restore-keys: site-etag-
+
+      - name: 比 ETag（只有定时兜底需要）
+        id: etag
+        run: |
+          mkdir -p .etag
+          # HEAD 请求：Spring 会把 HEAD 映射到 GET handler，只回头不回体
+          # || true：接口一时不可达不该让整条流水线死在这儿 —— 拿不到 ETag 就照常构建
+          curl -fsSI -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" 2>/dev/null \
+            | tr -d '\r' | awk -F': ' 'tolower($1)=="etag"{print $2}' > .etag/current || true
+          current="$(cat .etag/current 2>/dev/null || true)"
+          echo "当前 ETag: ${current:-<空>}"
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -n "$current" ] \
+             && [ -f .etag/cached ] && [ "$(cat .etag/cached)" = "$current" ]; then
+            echo "内容没变，跳过这次构建"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 构建静态站
+        if: steps.etag.outputs.skip != 'true'
+        working-directory: frontend/site
+        run: |
+          npm ci
+          npm run build
+
+      - name: 准备 SSH
+        if: steps.etag.outputs.skip != 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: 同步产物
+        if: steps.etag.outputs.skip != 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: |
+          # --delete 不能省：删掉的文章必须从线上消失
+          # 但 .well-known 要留着 —— 那是 certbot 续期时放的校验文件
+          # $HOME 而不是 ~：-e 的值在双引号里，~ 不会被展开
+          rsync -az --delete --exclude '.well-known/' \
+            -e "ssh -i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new -p $SSH_PORT" \
+            frontend/site/out/ "$SSH_USER@$SSH_HOST:/srv/blog/static/"
+
+      - name: 记下这次的 ETag
+        if: steps.etag.outputs.skip != 'true'
+        run: cp .etag/current .etag/cached
+
+      - uses: actions/cache/save@v4
+        if: steps.etag.outputs.skip != 'true'
+        with:
+          path: .etag
+          key: site-etag-${{ github.run_id }}
+
+      - name: 失败告警
+        if: failure() && secrets.FEISHU_WEBHOOK != ''
+        env:
+          WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        run: |
+          curl -s -X POST "$WEBHOOK" -H 'Content-Type: application/json' \
+            -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"[abyssvstar] deploy-site 失败，见 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}}"
