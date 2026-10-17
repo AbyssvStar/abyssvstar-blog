@@ -1,0 +1,122 @@
+name: deploy-app
+
+# 应用镜像 + 后台静态外壳的部署流水线。
+# 部署目录/srv/blog
+# 只在 main 分支上跑，且只在真正影响产物的路径变更时触发（改文档、改公开站不部署 app）。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - "frontend/admin/**"
+      - ".github/workflows/deploy-app.yml"
+  workflow_dispatch:
+
+concurrency:
+  # 同一条流水线只留最后一次：连着推两次不该排队部署两次
+  group: deploy-app
+  cancel-in-progress: true
+
+env:
+  # 镜像仓库用阿里云 ACR 个人版
+  # 这三个都从仓库 Variables 来：Settings → Secrets and variables → Actions → Variables
+  IMAGE: ${{ vars.ACR_REGISTRY }}/${{ vars.ACR_NAMESPACE }}/abyssvstar-blog-app
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: 构建 + 测试
+        run: |
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+          ./gradlew build --no-daemon --console=plain
+
+      - name: 构建并推送镜像
+        env:
+          SHA: ${{ github.sha }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          # ACR 要求仓库名全小写，命名空间同理；这里再兜一次
+          image="$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')"
+          echo "IMAGE_LC=$image" >> "$GITHUB_ENV"
+          echo "$ACR_PASSWORD" | docker login "${{ vars.ACR_REGISTRY }}" -u "$ACR_USERNAME" --password-stdin
+          docker build --tag "$image:${SHA::7}" --tag "$image:latest" .
+          docker push "$image:${SHA::7}"
+          docker push "$image:latest"
+
+      - name: 构建后台静态外壳
+        working-directory: frontend/admin
+        run: |
+          npm ci
+          npm run build
+
+      - name: 准备 SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: 部署后台外壳
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: |
+          # 注意用 $HOME：-e 的值在双引号里，~ 不会被展开，ssh 会当成字面路径
+          rsync -az --delete \
+            -e "ssh -i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new -p $SSH_PORT" \
+            frontend/admin/dist/ "$SSH_USER@$SSH_HOST:/srv/blog/static/admin/"
+
+      - name: 部署应用（拉镜像 + 重启 + 等健康检查）
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: |
+          ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=accept-new -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" bash -s <<'REMOTE'
+          set -euo pipefail
+          cd /srv/blog
+          docker compose pull app
+          docker compose up -d app
+          for _ in $(seq 1 40); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' blog-app 2>/dev/null || echo unknown)
+            if [ "$status" = "healthy" ]; then echo "app healthy"; exit 0; fi
+            sleep 3
+          done
+          echo "app 两分钟内没 healthy，最后 40 行日志："
+          docker logs --tail 40 blog-app || true
+          exit 1
+          REMOTE
+
+      - name: 失败告警
+        if: failure() && secrets.FEISHU_WEBHOOK != ''
+        env:
+          WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        run: |
+          curl -s -X POST "$WEBHOOK" -H 'Content-Type: application/json' \
+            -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"[abyssvstar] deploy-app 失败，见 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}}"
