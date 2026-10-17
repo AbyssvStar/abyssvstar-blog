@@ -31,7 +31,10 @@ export default async function HomePage() {
       <section className="hero-stage">
         <GalaxyBackground />
         <div className="hero-stage__inner">
-          <div className="hero__mark" />
+          {/* 原来是一根 2px 短横线，换成一行等宽小字：更像仪表，也承担了「这是什么站」的功能 */}
+          <div className="hero-stage__kicker">
+            PERSONAL BLOG · SINCE {new Date(site.startedAt).getFullYear()}
+          </div>
           <HeroTitle text={config.title} />
           <p className="hero-stage__sub">{site.intro}</p>
           <div className="stats">
