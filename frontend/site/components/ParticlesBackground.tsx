@@ -113,21 +113,31 @@ interface Look {
 
 function readLook(): Look {
   const style = getComputedStyle(document.documentElement)
+  // 默认主题是暗色：只有显式选了 light 才算浅色
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light'
+  const fallback = dark
+    ? { accent: '#6ea8fe', muted: '#8ec5ff', strong: '#e8e8ea' }
+    : { accent: '#2563eb', muted: '#0e7490', strong: '#64748b' }
+
   return {
     palette: {
-      accent: clean(style.getPropertyValue('--accent'), '#6ea8fe'),
-      muted: clean(style.getPropertyValue('--text-muted'), '#9a9aa3'),
-      strong: clean(style.getPropertyValue('--text'), '#e8e8ea'),
+      accent: pick(style, '--particle-a', fallback.accent),
+      muted: pick(style, '--particle-b', fallback.muted),
+      strong: pick(style, '--particle-c', fallback.strong),
     },
-    // 默认主题是暗色：只有显式选了 light 才算浅色
-    dark: document.documentElement.getAttribute('data-theme') !== 'light',
+    dark,
   }
 }
 
-/** 主题令牌是 light-dark() 编译出来的，万一读到没解析干净的 var(...) 就退回默认色 */
-function clean(value: string, fallback: string): string {
-  const v = value.trim()
-  return !v || v.includes('var(') || v.length > 40 ? fallback : v
+/**
+ * 只接受「单个十六进制颜色」。
+ *
+ * 这里以前只排除了空值和 `var(`，结果 light-dark() 编译出来的拼接串被原样喂给了 tsParticles，
+ * 颜色非法，库退回默认白 —— 浅色主题下粒子就是白的。宁可退回内置色，也不要传非法值。
+ */
+function pick(style: CSSStyleDeclaration, name: string, fallback: string): string {
+  const value = style.getPropertyValue(name).trim()
+  return /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) ? value : fallback
 }
 
 function initialLook(): Look {

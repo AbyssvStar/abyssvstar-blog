@@ -3,16 +3,21 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * 首页大标题：下滑时不是直接滚走，而是缩小着飞向右上角；滚回顶部再飞回中间。
+ * 首页大标题。三层效果叠在一起，都只动 transform / opacity：
  *
- * 做法是纯 transform（不改布局）：把「初始位置 → 右上角」的位移按滚动进度插值。
- * 因为标题本身还在文档流里、会随页面往上滚，所以纵向位移要额外补回滚动量 ——
- * 这样进度到 1 时它正好停在视口右上角。
+ *  1) 逐字入场 —— 每个字一个 span，靠 CSS 变量错开动画延迟（样式在 globals.css）
+ *  2) 指针视差 —— 整块随指针做几像素的位移，和背后星野的深度呼应
+ *  3) 下滑飞走 —— 缩小着飞向右上角，滚回顶部再飞回中间
+ *
+ * 第 3 条是纯 transform 插值、不改布局：标题本身还在文档流里、会随页面往上滚，
+ * 所以纵向位移要额外补回滚动量，进度到 1 时才正好停在视口右上角。
  */
 export function HeroTitle({ text }: { text: string }) {
   const ref = useRef<HTMLHeadingElement>(null)
+  const innerRef = useRef<HTMLSpanElement>(null)
   const origin = useRef<{ x: number; y: number } | null>(null)
 
+  // 3) 滚动：缩小飞向右上角
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -53,7 +58,7 @@ export function HeroTitle({ text }: { text: string }) {
 
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onResize)
-    // 字体加载完布局才会定下来，重新量一次起点
+    // 展示字体加载完字形宽度才会变，重新量一次起点
     document.fonts?.ready.then(() => {
       measure()
       onScroll()
@@ -65,9 +70,59 @@ export function HeroTitle({ text }: { text: string }) {
     }
   }, [])
 
+  // 2) 指针视差：缓动追上去，幅度刻意压小（±8px），再大就变成"晃"
+  useEffect(() => {
+    const el = innerRef.current
+    if (!el) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const RANGE_X = 8
+    const RANGE_Y = 6
+    let targetX = 0
+    let targetY = 0
+    let x = 0
+    let y = 0
+    let frame = 0
+
+    const tick = () => {
+      frame = 0
+      x += (targetX - x) * 0.08
+      y += (targetY - y) * 0.08
+      el.style.setProperty('--px', `${x.toFixed(2)}px`)
+      el.style.setProperty('--py', `${y.toFixed(2)}px`)
+      if (Math.abs(targetX - x) + Math.abs(targetY - y) > 0.15) frame = requestAnimationFrame(tick)
+    }
+
+    const onMove = (event: PointerEvent) => {
+      targetX = (event.clientX / window.innerWidth - 0.5) * RANGE_X * 2
+      targetY = (event.clientY / window.innerHeight - 0.5) * RANGE_Y * 2
+      if (!frame) frame = requestAnimationFrame(tick)
+    }
+
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [])
+
+  const chars = Array.from(text)
+
   return (
-    <h1 ref={ref} className="hero-stage__title">
-      {text}
+    // 逐字拆成了 span，屏幕阅读器会把字母一个个念出来，所以文字挂在 aria-label 上
+    <h1 ref={ref} className="hero-stage__title" aria-label={text}>
+      <span ref={innerRef} className="hero-stage__title-inner" aria-hidden="true">
+        {chars.map((char, index) => (
+          <span
+            // 逐字 span 用下标当 key：文字很少变，变了整体重排也无所谓
+            key={`${char}-${index}`}
+            className="hero-stage__char"
+            style={{ '--i': Math.min(index, 14) } as React.CSSProperties}
+          >
+            {char === ' ' ? '\u00a0' : char}
+          </span>
+        ))}
+      </span>
     </h1>
   )
 }
