@@ -39,8 +39,9 @@ export default async function HomePage() {
             <Stat num={formatWords(stats.words)} label="总字数" />
             <Stat num={stats.days} label="运行天数" />
           </div>
-          <p className="faint mono" style={{ fontSize: '0.72rem', marginTop: '1.1rem' }}>
-            最近更新 {latest[0] ? formatDate(latest[0].publishedAt) : '—'} · 按住左键在星野上拖动
+          <p className="faint mono hero-hint" style={{ fontSize: '0.72rem', marginTop: '1.1rem' }}>
+            最近更新 {latest[0] ? formatDate(latest[0].publishedAt) : '—'}
+            <span className="hero-hint__drag"> · 按住左键在星野上拖动</span>
           </p>
         </div>
       </section>

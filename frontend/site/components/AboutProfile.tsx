@@ -21,6 +21,8 @@ export function AboutProfile({
 }) {
   const [spins, setSpins] = useState(0)
   const [spinning, setSpinning] = useState(false)
+  // 头像地址来自后台的图床：404 时不能露出浏览器那个破图图标，退回自己画的四角星
+  const [avatarFailed, setAvatarFailed] = useState(false)
   const eggFound = spins >= 5
 
   function poke() {
@@ -39,9 +41,9 @@ export function AboutProfile({
         aria-label="头像"
         title="点一下试试"
       >
-        {avatarUrl ? (
+        {avatarUrl && !avatarFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt="" />
+          <img src={avatarUrl} alt="" onError={() => setAvatarFailed(true)} />
         ) : (
           <StarMark />
         )}
