@@ -68,7 +68,9 @@ jobs:
           curl -sS --max-time 20 -o /dev/null -w 'HTTP %{http_code}，耗时 %{time_total}s\n' \
             -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" || {
             echo "--- 带 -v 重试一次 ---"
-            curl -v --max-time 20 -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" -o /dev/null 2>&1 | tail -40
+            # 公开仓库的 Actions 日志是公开的：-v 会打印请求头（含 token），所以这里换成不需要鉴权的公开端点做诊断
+            public_url="${EXPORT_URL%/api/v1/export}/api/v1/posts"
+            curl -v --max-time 20 "$public_url" -o /dev/null 2>&1 | tail -40
             exit 1
           }
 
