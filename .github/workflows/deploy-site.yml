@@ -103,7 +103,7 @@ jobs:
           # --delete 不能省：删掉的文章必须从线上消失
           # 但 .well-known 要留着 —— 那是 certbot 续期时放的校验文件
           # $HOME 而不是 ~：-e 的值在双引号里，~ 不会被展开
-          rsync -az --delete --exclude '.well-known/' \
+          rsync -az --delete --exclude '.well-known/' --exclude 'admin/' \
             -e "ssh -i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new -p $SSH_PORT" \
             frontend/site/out/ "$SSH_USER@$SSH_HOST:/srv/blog/static/"
 
