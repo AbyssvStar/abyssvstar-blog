@@ -68,10 +68,8 @@ jobs:
           curl -sS --max-time 20 -o /dev/null -w 'HTTP %{http_code}，耗时 %{time_total}s\n' \
             -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" || {
             echo "--- 带 -v 重试一次 ---"
-            curl -v --max-time 20 -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" -o /dev/null 2>&1 | tail -40
-            echo "--- 降到 TLS 1.2 再试（区分「TLS1.3 被重置」还是「IP/SNI 被重置」）---"
-            curl -sS -v --tlsv1.2 --tls-max 1.2 --max-time 20 \
-              -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" -o /dev/null 2>&1 | tail -20
+            public_url="${EXPORT_URL%/api/v1/export}/api/v1/posts"
+            curl -v --max-time 20 "$public_url" -o /dev/null 2>&1 | tail -40
             exit 1
           }
 
@@ -104,7 +102,7 @@ jobs:
           # --delete 不能省：删掉的文章必须从线上消失
           # 但 .well-known 要留着 —— 那是 certbot 续期时放的校验文件
           # $HOME 而不是 ~：-e 的值在双引号里，~ 不会被展开
-          rsync -az --delete --exclude '.well-known/' \
+          rsync -az --delete --exclude '.well-known/' --exclude 'admin/' \
             -e "ssh -i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new -p $SSH_PORT" \
             frontend/site/out/ "$SSH_USER@$SSH_HOST:/srv/blog/static/"
 
