@@ -63,6 +63,9 @@ const CACHE_MODE =
 
 let pending: Promise<ExportPayload> | null = null
 
+/** 重试次数。境内/境外的这一跳偶发重置，两次重试足够兜住抖动 */
+const FETCH_RETRIES = 3
+
 /**
  * 内容的读取入口。
  *
@@ -82,6 +85,28 @@ function describeError(cause: unknown): string {
   return nested instanceof Error ? `${cause.message}: ${nested.message}` : cause.message
 }
 
+/**
+ * 拉导出带重试。
+ *
+ * GitHub 的 runner 在境外、导出接口在境内，那一跳偶尔会被中途重置（实测过 ead ECONNRESET）。
+ * 重试两次能把偶发的那一下兜住；**如果三次都失败**，就不是抖动，得换网络路径（见 deploy/README.md）。
+ */
+async function fetchWithRetry(headers: Record<string, string>): Promise<Response> {
+  let last: unknown
+  for (let attempt = 1; attempt <= FETCH_RETRIES; attempt++) {
+    try {
+      return await fetch(EXPORT_URL, { headers, ...CACHE_MODE })
+    } catch (cause) {
+      last = cause
+      if (attempt < FETCH_RETRIES) {
+        console.warn(`拉取导出失败（第 ${attempt}/${FETCH_RETRIES} 次），2 秒后重试：${describeError(cause)}`)
+        await new Promise((resolve) => setTimeout(resolve, attempt * 2000))
+      }
+    }
+  }
+  throw last
+}
+
 async function fetchExport(): Promise<ExportPayload> {
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (EXPORT_TOKEN) headers['X-Export-Token'] = EXPORT_TOKEN
@@ -98,7 +123,7 @@ async function fetchExport(): Promise<ExportPayload> {
      * 所以用「静态 + 30 秒过期」：一次构建里多个 worker 共用同一份结果（只拉一次），
      * 而下一个构建会重新去问后端。CI 每次都是干净的文件系统，永远是拉新的。
      */
-    res = await fetch(EXPORT_URL, { headers, ...CACHE_MODE })
+    res = await fetchWithRetry(headers)
   } catch (cause) {
     // 宁可让构建失败，也不要发一个空站上去 —— 那比构建失败难发现得多
     throw new Error(`拉取内容失败（${EXPORT_URL}）：${describeError(cause)}`)
