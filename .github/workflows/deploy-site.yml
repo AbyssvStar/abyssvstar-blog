@@ -69,6 +69,9 @@ jobs:
             -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" || {
             echo "--- 带 -v 重试一次 ---"
             curl -v --max-time 20 -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" -o /dev/null 2>&1 | tail -40
+            echo "--- 降到 TLS 1.2 再试（区分「TLS1.3 被重置」还是「IP/SNI 被重置」）---"
+            curl -sS -v --tlsv1.2 --tls-max 1.2 --max-time 20 \
+              -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" -o /dev/null 2>&1 | tail -20
             exit 1
           }
 
