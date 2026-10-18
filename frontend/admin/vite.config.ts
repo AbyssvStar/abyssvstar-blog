@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  // Nginx 把后台挂在 /admin/ 下，静态资源必须走这个前缀；少了它产物里是 /assets/*，
+  // 浏览器去站点根目录找，404 之后页面就是一片白
+  base: '/admin/',
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
