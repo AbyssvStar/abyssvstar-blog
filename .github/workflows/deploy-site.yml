@@ -24,6 +24,7 @@ env:
   EXPORT_URL: ${{ vars.EXPORT_URL || 'https://abyssvstar.cloud/api/v1/export' }}
   SITE_URL: ${{ vars.SITE_URL || 'https://abyssvstar.cloud' }}
   EXPORT_TOKEN: ${{ secrets.EXPORT_TOKEN }}
+  NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
   build-and-deploy:
@@ -60,8 +61,20 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: 探测导出接口
+        if: steps.etag.outputs.skip != 'true'
+        run: |
+          # 先把链路问题单独暴露出来：失败时带 -v 再打一次，能看到断在 DNS / TLS / 读响应哪一步
+          curl -sS --max-time 20 -o /dev/null -w 'HTTP %{http_code}，耗时 %{time_total}s\n' \
+            -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" || {
+            echo "--- 带 -v 重试一次 ---"
+            curl -v --max-time 20 -H "X-Export-Token: $EXPORT_TOKEN" "$EXPORT_URL" -o /dev/null 2>&1 | tail -40
+            exit 1
+          }
+
       - name: 构建静态站
         if: steps.etag.outputs.skip != 'true'
+        timeout-minutes: 8
         working-directory: frontend/site
         run: |
           npm ci
