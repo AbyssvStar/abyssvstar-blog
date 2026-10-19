@@ -178,8 +178,8 @@ class PostService(
 
         val publishedAt = post.publishedAt
         return publication.toPublic(
-            prev = publishedAt?.let { posts.findPrevPublic(it, id) }?.toAdjacent(),
-            next = publishedAt?.let { posts.findNextPublic(it, id) }?.toAdjacent(),
+            prev = publishedAt?.let { posts.findPrevPublic(it, id) }?.toPublishedAdjacent(),
+            next = publishedAt?.let { posts.findNextPublic(it, id) }?.toPublishedAdjacent(),
         )
     }
 
@@ -267,7 +267,12 @@ class PostService(
         hasUnpublishedChanges = stale,
     )
 
-    private fun Post.toAdjacent() = AdjacentPost(slug = slug, title = title)
+    /**
+     * 上下篇只读**邻居的发布快照**。工作副本改了标题或 slug 但还没发布时，访客不该提前看到，
+     * 更不该拿到一个 404 的链接 —— 排序仍用 posts 的 published_at（它和快照是同时写的）。
+     */
+    private fun Post.toPublishedAdjacent(): AdjacentPost? =
+        publications.findByPostId(requireNotNull(id))?.let { AdjacentPost(slug = it.slug, title = it.title) }
 
     private fun PostPublication.toPublic(prev: AdjacentPost?, next: AdjacentPost?) = PublicPostResponse(
         slug = slug,
