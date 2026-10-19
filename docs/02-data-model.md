@@ -80,6 +80,7 @@ ALTER TABLE posts ADD CONSTRAINT posts_scheduled_ck
 | `title` | text | NOT NULL | |
 | `summary` | text | NOT NULL | |
 | `html` | text | NOT NULL | 发布时渲染好的 HTML |
+| `content_md` | text | | **发布时的 Markdown 原文**（V11 起）；G4 切 chunk 用，老快照为空 |
 | `cover_url` | text | | 发布时的封面 URL 快照 |
 | `tags` | jsonb | NOT NULL DEFAULT `'[]'` | 标签名快照 |
 | `word_count` | int | NOT NULL | |
@@ -272,10 +273,12 @@ CREATE UNIQUE INDEX assets_sha_uq ON assets (sha256) WHERE deleted_at IS NULL;
 | `V4__notes.sql` | `notes`、`note_assets` |
 | `V5__comments.sql` | `comments` |
 | `V6__metrics.sql` | `daily_views`、`ai_usage`、`site_builds` |
-| `V7__trgm_fallback.sql` | `CREATE EXTENSION pg_trgm` + 降级搜索索引 |
+| `V7__trgm_fallback.sql` | `CREATE EXTENSION pg_trgm`；当时的降级索引在 `posts`，V12 已迁到快照 |
 | `V8__job_indexes.sql` | 定时发布扫描索引、ES 补偿索引 |
-| `V9__site_config.sql` | `site_config`（单行，含首行种子配置） |
+| `V9__site_config.sql` | `site_config` 单行表，含首行种子配置 |
 | `V10__site_config_about_images.sql` | `site_config` 加关于页的封面图 / 头像两列 |
+| `V11__publication_content_md.sql` | `post_publications.content_md`（发布时冻结 Markdown） |
+| `V12__publication_trgm.sql` | 降级搜索 trigram 索引改到 `post_publications`，删掉 `posts` 上那两个 |
 
 > 后续迁移**只增不改**：已应用的迁移文件永不修改，结构变更一律新开 `V{n+1}`。
 

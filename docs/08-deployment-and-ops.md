@@ -15,7 +15,7 @@ abyssvstar.cloud
 ├── /media/**            → proxy_pass → minio:9000/blog-media/
 ├── /api/v1/**           → proxy_pass → app:8080
 ├── /admin/api/**        → proxy_pass → app:8080
-├── /admin/**            → proxy_pass → app:8080（后台 UI 资源）
+├── /admin/**            → 静态产物目录 /srv/blog/static/admin（后台 Vite 产物）
 └── /actuator/**         → allow 127.0.0.1; deny all
 ```
 
@@ -46,10 +46,15 @@ abyssvstar.cloud
 ### 2.2 三条流水线
 
 ```
+[CI]        每次 push / pull request
+  → 后端 ./gradlew build
+  → 后台 npm ci && npm run build
+
 [应用镜像]  push to main（src/** 或 build.gradle.kts 变更）
   → ./gradlew test build
   → docker build -t <ACR_REGISTRY>/<ACR_NAMESPACE>/abyssvstar-blog-app:<sha>
   → docker push
+  → rsync 后台外壳到 /srv/blog/static/admin/
   → SSH: docker compose pull app && docker compose up -d app
 
 [静态站]   repository_dispatch: site-rebuild  ／  定时每 30 分钟

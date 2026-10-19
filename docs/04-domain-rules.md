@@ -143,16 +143,18 @@ has_unpublished_changes = sha256(title + summary + content_md + slug + tags + co
 
 ```
 @Scheduled(fixedDelay = 60s)
-  SELECT * FROM posts
+  SELECT id FROM posts
    WHERE status = 'SCHEDULED' AND visibility = 'PUBLIC' AND publish_at <= now()
-   FOR UPDATE SKIP LOCKED
-  → 逐条执行与手动发布完全相同的流程（复用同一段代码）
+  → 逐篇开启短事务：
+       SELECT * FROM posts WHERE id = ? FOR UPDATE
+       再次确认 status / visibility / publish_at
+       → 执行与手动发布完全相同的流程（复用同一段代码）
 ```
 
 | 边界场景 | 处理 |
 |---------|------|
 | 服务器停机跨过了 `publish_at` | 重启后下一次扫描立即发布，**不会漏**（因为判断条件是 `<= now()` 而非"刚好等于"）|
-| 同一秒有多篇到期 | `FOR UPDATE SKIP LOCKED` + 逐条发布，最后合并成一次构建 |
+| 同一秒有多篇到期 | 逐篇短事务、按 id 加行锁发布，最后合并成一次构建 |
 | 定时任务重复执行 | 发布流程以 `status` 为幂等键：已经是 `PUBLISHED` 就跳过 |
 | 排期时文章被改为 `PRIVATE` | 扫描条件带 `visibility = 'PUBLIC'`，直接跳过 |
 

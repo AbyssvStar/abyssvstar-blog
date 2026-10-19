@@ -15,9 +15,9 @@
                            ▼                    ▼
              ┌──────────────────────┐  ┌────────────────────────────┐
              │ Next.js 静态导出产物  │  │  Kotlin 单体                │
-             │ 纯 HTML/CSS/JS       │  │  Spring Boot 3.5 + JDK 21   │
+             │ 纯 HTML/CSS/JS       │  │  Spring Boot 3.4.5 + JDK 21 │
              │ 服务器零渲染开销      │  │  /api/v1   /admin/api       │
-             └──────────────────────┘  │  + 内嵌管理后台 UI          │
+             └──────────────────────┘  │  后台 UI 另行静态托管        │
                            ▲           └──┬────────┬────────┬────────┘
                            │              │        │        │
                            │        PostgreSQL 16  Redis 7  Elasticsearch 8
@@ -41,7 +41,7 @@
 
 | 单元 | 关键配置 | 端口 |
 |------|---------|------|
-| **app** | Kotlin 2.1 + Spring Boot 3.5 | 8080 |
+| **app** | Kotlin 2.1 + Spring Boot 3.4.5 | 8080 |
 | **postgres** | PG 16，`shared_buffers=256MB` | 5432 |
 | **elasticsearch** | ES 8.x，单节点 0 副本 | 9200 |
 | **redis** | Redis 7 | 6379 |
@@ -72,7 +72,7 @@ environment:
 
 | 领域 | 选型 | 为什么不选别的 |
 |------|------|---------------|
-| 语言 / 框架 | Kotlin 2.1 + Spring Boot 3.5 + JDK 21 | 不用 WebFlux：博客 IO 模型简单，响应式是纯负担且难调试 |
+| 语言 / 框架 | Kotlin 2.1 + Spring Boot 3.4.5 + JDK 21 | 不用 WebFlux：博客 IO 模型简单，响应式是纯负担且难调试 |
 | 业务数据库 | PostgreSQL 16 | 业务数据唯一存储；`pg_trgm` 作 ES 的降级兜底 |
 | 检索 | **Elasticsearch 8.x**（IK 分词 + BM25 + `dense_vector` kNN） | ES 是主检索。选它是因为**要做 BM25 + 向量混合检索**，不是因为它"更高级" |
 | 检索降级 | PG `pg_trgm` 模糊匹配 | ES 挂掉时不至于搜索完全不可用 |
@@ -86,7 +86,7 @@ environment:
 | 图片处理 | **JDK `ImageIO` + `Graphics2D`**（应用内多尺寸缩略图） | 不引第三方库。自己写：先读尺寸、再决定要不要解码见 §7.3 |
 | 对象存储 / 图床 | **MinIO 自建**（`shared/storage`） | 图片不进应用服务器磁盘。代价约 +200MB 内存，已认账 |
 | 编排 | Docker Compose（+ `es` profile） | 单机 |
-| CI/CD | GitHub Actions → GHCR 镜像 → SSH 部署 | 不在服务器上构建 |
+| CI/CD | GitHub Actions → 阿里云 ACR 镜像 → SSH 部署；后台与公开站由 Nginx 直发静态产物 | 不在服务器上构建 |
 | 可观测 | Actuator + Micrometer + JSON 结构化日志 | 不上 Prometheus / Grafana：内存已经紧，先靠 Actuator + 日志 + 内存告警 |
 
 ---

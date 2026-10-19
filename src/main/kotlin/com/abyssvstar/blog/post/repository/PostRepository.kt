@@ -78,15 +78,15 @@ class PostRepository(private val mapper: PostMapper) {
         mapper.selectList(PublishedContentSpec.wrapper().orderByDesc("published_at", "id"))
 
     /**
-     * 到点该发的排期文章，逐条加行锁。
+     * 找出到点该发的排期文章。这里只负责扫描，不负责锁行。
      *
      * 用 `publish_at <= now()` 而不是「刚好等于」：服务器停机跨过了发布时间也不会漏发。
-     * `FOR UPDATE SKIP LOCKED` 让重复执行或并发执行不会互相阻塞。
+     * 真正发布前会在事务里按 id 重新加锁并复核状态，免得扫描结果过期后仍然发出去。
      *
      * 这里的 `visibility = PUBLIC` 和 PublishedContentSpec 不是同一件事 ——
      * 那个判「能不能被访客看到」，这个判「该不该现在发出去」。
      */
-    fun lockDueForPublish(): List<Post> =
+    fun findDueForPublish(): List<Post> =
         mapper.selectList(
             QueryWrapper<Post>()
                 .eq("status", PostStatus.SCHEDULED.name)
@@ -94,9 +94,12 @@ class PostRepository(private val mapper: PostMapper) {
                 .isNull("deleted_at")
                 .isNotNull("publish_at")
                 .le("publish_at", Instant.now())
-                .orderByAsc("publish_at")
-                .last("FOR UPDATE SKIP LOCKED"),
+                .orderByAsc("publish_at"),
         )
+
+    /** 在当前事务里锁住一篇文章。只应在发布这种需要先复核状态的短事务里调用。 */
+    fun findByIdForUpdate(id: Long): Post? =
+        mapper.selectOne(active().eq("id", id).last("FOR UPDATE"))
 
     /** 后台列表：全部未删除的文章，按最后修改时间倒序。 */
     fun pageAll(page: Int, size: Int): Page<Post> =

@@ -94,7 +94,8 @@
 
 ## 4. chunk 切分规则
 
-输入是发布快照的 Markdown，输出是一组 chunk。
+输入是发布快照的 Markdown（`post_publications.content_md`），输出是一组 chunk。
+V11 之前的快照没有这份原文，切分时退化为从 `html` 提取文本；下一次发布会自然补上。
 
 ```
 用 CommonMark AST 遍历，维护一个「标题栈」：
