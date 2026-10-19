@@ -95,15 +95,16 @@ class PublishService(
     /**
      * 定时任务专用：重读状态、确认仍然「排期中 + 公开 + 已到点」，再走和手动发布相同的流程。
      *
-     * 扫描和真正发布之间有时间差，而扫描本身没有事务（`FOR UPDATE` 在 autocommit 下等于没锁），
-     * 所以不能信扫描结果 —— 否则用户刚取消排期，任务照样会把它发出去。
+     * 扫描和真正发布之间有时间差，所以不能信扫描结果。这里在事务里锁住该行再复核：
+     * 用户同时取消排期时，两边会在这一行上串行化，不会出现刚取消又被后台发出去。
      */
     @Transactional
     fun publishScheduled(postId: Long): PostResponse? {
-        val post = posts.findById(postId) ?: return null
+        val post = posts.findByIdForUpdate(postId) ?: return null
         if (post.status != PostStatus.SCHEDULED) return null
         if (post.visibility != Visibility.PUBLIC) return null
-        if (post.publishAt == null || post.publishAt!!.isAfter(Instant.now())) return null
+        val publishAt = post.publishAt ?: return null
+        if (publishAt.isAfter(Instant.now())) return null
         return publish(postId)
     }
 

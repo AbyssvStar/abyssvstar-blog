@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component
  * 用 `publish_at <= now()` 而不是「刚好等于」，所以服务器停机跨过了发布时间也不会漏发，
  * 重启后下一次扫描就会补上。
  *
- * 注意 `lockDueForPublish` 里的 `FOR UPDATE` 在 autocommit 下其实不生效（锁随语句结束释放），
- * 所以真正的保护在 [PublishService.publishScheduled]：它在发布前重读状态再发。
+ * 扫描不持锁；真正的保护在 [PublishService.publishScheduled]：它在短事务里锁住该行、
+ * 重新确认状态和排期时间后再发布。
  *
  * 某一条失败只记日志，不影响同一批里的其它文章。
  */
@@ -26,7 +26,7 @@ class ScheduledPublisher(
 
     @Scheduled(fixedDelay = SCAN_INTERVAL_MS, initialDelay = INITIAL_DELAY_MS)
     fun publishDuePosts() {
-        val due = posts.lockDueForPublish()
+        val due = posts.findDueForPublish()
         if (due.isEmpty()) return
 
         log.info("有 {} 篇排期文章到点了", due.size)
