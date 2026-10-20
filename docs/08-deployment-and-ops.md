@@ -15,7 +15,7 @@ abyssvstar.cloud
 ├── /media/**            → proxy_pass → minio:9000/blog-media/
 ├── /api/v1/**           → proxy_pass → app:8080
 ├── /admin/api/**        → proxy_pass → app:8080
-├── /admin/**            → proxy_pass → app:8080（后台 UI 资源）
+├── /admin/**            → 静态产物目录 /srv/blog/static/admin（后台 Vite 产物）
 └── /actuator/**         → allow 127.0.0.1; deny all
 ```
 
@@ -42,14 +42,29 @@ abyssvstar.cloud
 
 > `-XX:+UseSerialGC` 是刻意的：512MB 堆 + 2 核，Serial GC 的 GC 开销比 G1 更低，也没有并行线程抢占 CPU。
 
+### 2.1.1 Elasticsearch
+
+- 镜像：`infra/elasticsearch/Dockerfile`，基于 Elasticsearch 8.15.3 安装同版本 IK 插件
+- Profile：`docker compose --profile es up -d elasticsearch`
+- App 地址：容器内 `BLOG_SEARCH_URL=http://elasticsearch:9200`
+- 堆：固定 `-Xms512m -Xmx512m`，单节点、0 副本
+- ES 不可达不阻止 app 启动，搜索降级到 PostgreSQL
+- ES 可达但 mapping schema / 模型 / 向量维度不匹配时，应用启动失败并明确报错
+- 宿主 Linux 仍需满足 `vm.max_map_count >= 262144`
+
 
 ### 2.2 三条流水线
 
 ```
+[CI]        每次 push / pull request
+  → 后端 ./gradlew build
+  → 后台 npm ci && npm run build
+
 [应用镜像]  push to main（src/** 或 build.gradle.kts 变更）
   → ./gradlew test build
   → docker build -t <ACR_REGISTRY>/<ACR_NAMESPACE>/abyssvstar-blog-app:<sha>
   → docker push
+  → rsync 后台外壳到 /srv/blog/static/admin/
   → SSH: docker compose pull app && docker compose up -d app
 
 [静态站]   repository_dispatch: site-rebuild  ／  定时每 30 分钟

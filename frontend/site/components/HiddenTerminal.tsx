@@ -91,7 +91,7 @@ export function HiddenTerminal({ posts }: { posts: TermPost[] }) {
           { kind: 'out', text: 'open <序号|slug>   打开一篇' },
           { kind: 'out', text: 'cat about          关于这一页' },
           { kind: 'out', text: 'theme <dark|light> 换主题' },
-          { kind: 'out', text: 'star               放一炮' },
+          { kind: 'out', text: 'star               放一炮（可以连续发）' },
           { kind: 'out', text: 'date / uptime / clear' },
           { kind: 'out', text: 'sudo …             试试看' },
         ])

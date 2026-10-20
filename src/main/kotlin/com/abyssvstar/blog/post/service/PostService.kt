@@ -13,6 +13,7 @@ import com.abyssvstar.blog.post.web.dto.PublicPostResponse
 import com.abyssvstar.blog.post.web.dto.AdjacentPost
 import com.abyssvstar.blog.post.web.dto.PublicPostSummaryResponse
 import com.abyssvstar.blog.post.web.dto.UpdatePostRequest
+import com.abyssvstar.blog.search.sync.PostSearchSyncService
 import com.abyssvstar.blog.shared.domain.Visibility
 import com.abyssvstar.blog.shared.util.Slugify
 import com.abyssvstar.blog.shared.web.BusinessException
@@ -41,6 +42,7 @@ class PostService(
     private val media: AssetService,
     private val objectMapper: ObjectMapper,
     private val siteBuilds: SiteBuildService,
+    private val searchSync: PostSearchSyncService,
 ) {
 
     // ---------- 后台 ----------
@@ -111,8 +113,11 @@ class PostService(
         req.tags?.let { tags.replaceTags(id, it) }
 
         // 改成私密等于撤回。旧的发布快照留着会被导出接口带走，私人内容就上线了
-        if (post.visibility == Visibility.PRIVATE && publications.deleteByPostId(id)) {
-            siteBuilds.requestBuild("post.became-private:$id")
+        if (post.visibility == Visibility.PRIVATE) {
+            if (publications.deleteByPostId(id)) {
+                siteBuilds.requestBuild("post.became-private:$id")
+            }
+            searchSync.request(id)
         }
 
         return getForAdmin(id)
@@ -131,6 +136,7 @@ class PostService(
         if (publications.deleteByPostId(id)) {
             siteBuilds.requestBuild("post.deleted:$id")
         }
+        searchSync.request(id)
     }
 
     /** 按标题给一个当前没被占用的 slug。前端可以在用户手改之前先填上。 */
@@ -178,8 +184,8 @@ class PostService(
 
         val publishedAt = post.publishedAt
         return publication.toPublic(
-            prev = publishedAt?.let { posts.findPrevPublic(it, id) }?.toAdjacent(),
-            next = publishedAt?.let { posts.findNextPublic(it, id) }?.toAdjacent(),
+            prev = publishedAt?.let { posts.findPrevPublic(it, id) }?.toPublishedAdjacent(),
+            next = publishedAt?.let { posts.findNextPublic(it, id) }?.toPublishedAdjacent(),
         )
     }
 
@@ -267,7 +273,12 @@ class PostService(
         hasUnpublishedChanges = stale,
     )
 
-    private fun Post.toAdjacent() = AdjacentPost(slug = slug, title = title)
+    /**
+     * 上下篇只读**邻居的发布快照**。工作副本改了标题或 slug 但还没发布时，访客不该提前看到，
+     * 更不该拿到一个 404 的链接 —— 排序仍用 posts 的 published_at（它和快照是同时写的）。
+     */
+    private fun Post.toPublishedAdjacent(): AdjacentPost? =
+        publications.findByPostId(requireNotNull(id))?.let { AdjacentPost(slug = it.slug, title = it.title) }
 
     private fun PostPublication.toPublic(prev: AdjacentPost?, next: AdjacentPost?) = PublicPostResponse(
         slug = slug,

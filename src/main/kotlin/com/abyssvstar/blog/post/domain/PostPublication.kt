@@ -33,6 +33,10 @@ data class PostPublication(
     @TableField("html")
     var html: String = "",
 
+    /** 发布时的 Markdown 原文。G4 切 chunk 用它（HTML 已经丢了结构），老快照这一列是空的。 */
+    @TableField("content_md")
+    var contentMd: String? = null,
+
     /**
      * 发布时的封面 URL 快照。
      *

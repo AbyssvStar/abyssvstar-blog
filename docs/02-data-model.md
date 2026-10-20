@@ -42,8 +42,11 @@
 | `published_at`              | timestamptz |                              | 对外生效时间（用于排序与 RSS）                                |
 | `last_published_at`         | timestamptz |                              | 最近一次点「发布」的时间                                     |
 | `view_count`                | bigint      | NOT NULL DEFAULT 0           | 聚合阅读量                                            |
-| `es_sync_status`            | text        | NOT NULL DEFAULT `'PENDING'` | `PENDING` / `SYNCED` / `FAILED` / `SKIPPED`      |
-| `es_synced_at`              | timestamptz |                              |                                                  |
+| `es_sync_status`            | text        | NOT NULL DEFAULT `'SKIPPED'` | `PENDING` / `SYNCED` / `FAILED` / `SKIPPED`      |
+| `es_synced_at`              | timestamptz |                              | 最近一次成功写入或移除索引的时间 |
+| `es_sync_attempts`          | int         | NOT NULL DEFAULT 0           | 连续失败次数，成功后清零 |
+| `es_next_retry_at`          | timestamptz |                              | 失败退避后的下次重试时间 |
+| `es_last_error`             | text        |                              | 最近一次同步失败原因 |
 | `version`                   | bigint      | NOT NULL DEFAULT 0           | **乐观锁版本号**，自动保存冲突检测用（见 `04-domain-rules.md` §5）  |
 | `deleted_at`                | timestamptz |                              | 软删除                                              |
 | `created_at` / `updated_at` | timestamptz | NOT NULL DEFAULT now()       | 自动保存会频繁改 `updated_at`                            |
@@ -64,8 +67,8 @@ ALTER TABLE posts ADD CONSTRAINT posts_scheduled_ck
 | `UNIQUE (slug) WHERE deleted_at IS NULL` | 公开 URL 唯一性 |
 | `(status, published_at DESC) WHERE deleted_at IS NULL` | 后台列表、归档页 |
 | `(status, publish_at) WHERE status = 'SCHEDULED'` | 定时发布扫描（每分钟） |
-| `(es_sync_status) WHERE es_sync_status <> 'SYNCED'` | ES 补偿任务 |
-| `GIN (title gin_trgm_ops)` + `GIN (summary gin_trgm_ops)` | ES 挂掉时的降级搜索 |
+| `(es_sync_status) WHERE es_sync_status <> 'SYNCED'` | 搜索同步状态统计 |
+| `(es_next_retry_at, id) WHERE es_sync_status IN ('PENDING','FAILED')` | 搜索补偿任务按退避时间扫描 |
 
 ---
 
@@ -80,6 +83,7 @@ ALTER TABLE posts ADD CONSTRAINT posts_scheduled_ck
 | `title` | text | NOT NULL | |
 | `summary` | text | NOT NULL | |
 | `html` | text | NOT NULL | 发布时渲染好的 HTML |
+| `content_md` | text | | **发布时的 Markdown 原文**（V11 起）；G4 切 chunk 用，老快照为空 |
 | `cover_url` | text | | 发布时的封面 URL 快照 |
 | `tags` | jsonb | NOT NULL DEFAULT `'[]'` | 标签名快照 |
 | `word_count` | int | NOT NULL | |
@@ -92,6 +96,8 @@ ALTER TABLE posts ADD CONSTRAINT posts_scheduled_ck
 CREATE UNIQUE INDEX post_publications_slug_uq ON post_publications (slug);
 CREATE INDEX post_publications_pub_idx ON post_publications (published_at DESC);
 CREATE INDEX post_publications_tags_idx ON post_publications USING GIN (tags);
+CREATE INDEX post_publications_title_trgm_idx ON post_publications USING GIN (title gin_trgm_ops);
+CREATE INDEX post_publications_summary_trgm_idx ON post_publications USING GIN (summary gin_trgm_ops);
 ```
 
 > **这张表是静态导出接口 `/api/v1/export` 和 ES 索引的唯一数据源。** 两者读同一张表 → 天然一致。
@@ -272,10 +278,13 @@ CREATE UNIQUE INDEX assets_sha_uq ON assets (sha256) WHERE deleted_at IS NULL;
 | `V4__notes.sql` | `notes`、`note_assets` |
 | `V5__comments.sql` | `comments` |
 | `V6__metrics.sql` | `daily_views`、`ai_usage`、`site_builds` |
-| `V7__trgm_fallback.sql` | `CREATE EXTENSION pg_trgm` + 降级搜索索引 |
+| `V7__trgm_fallback.sql` | `CREATE EXTENSION pg_trgm`；当时的降级索引在 `posts`，V12 已迁到快照 |
 | `V8__job_indexes.sql` | 定时发布扫描索引、ES 补偿索引 |
-| `V9__site_config.sql` | `site_config`（单行，含首行种子配置） |
+| `V9__site_config.sql` | `site_config` 单行表，含首行种子配置 |
 | `V10__site_config_about_images.sql` | `site_config` 加关于页的封面图 / 头像两列 |
+| `V11__publication_content_md.sql` | `post_publications.content_md`（发布时冻结 Markdown） |
+| `V12__publication_trgm.sql` | 降级搜索 trigram 索引改到 `post_publications`，删掉 `posts` 上那两个 |
+| `V13__search_sync_state.sql` | 搜索同步重试状态、草稿默认 `SKIPPED`、补偿扫描索引 |
 
 > 后续迁移**只增不改**：已应用的迁移文件永不修改，结构变更一律新开 `V{n+1}`。
 

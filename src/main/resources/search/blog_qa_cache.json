@@ -1,0 +1,34 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "refresh_interval": "5s",
+    "analysis": {
+      "analyzer": {
+        "cn_index": { "type": "custom", "tokenizer": "ik_max_word" },
+        "cn_search": { "type": "custom", "tokenizer": "ik_smart" }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "_meta": {
+      "schemaVersion": 1,
+      "embeddingModel": "BAAI/bge-m3",
+      "embeddingDims": 1024
+    },
+    "properties": {
+      "question": { "type": "text", "analyzer": "cn_index", "search_analyzer": "cn_search" },
+      "questionVector": {
+        "type": "dense_vector",
+        "dims": 1024,
+        "index": true,
+        "similarity": "cosine"
+      },
+      "answer": { "type": "text", "analyzer": "cn_index", "search_analyzer": "cn_search" },
+      "sources": { "type": "keyword" },
+      "hitCount": { "type": "integer" },
+      "createdAt": { "type": "date" }
+    }
+  }
+}

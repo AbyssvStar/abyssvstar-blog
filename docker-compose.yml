@@ -123,6 +123,8 @@ services:
       BLOG_SITE_BUILD_REPOSITORY: ${BLOG_SITE_BUILD_REPOSITORY:-AbyssvStar/abyssvstar-blog}
       BLOG_SITE_BUILD_TOKEN: ${BLOG_SITE_BUILD_TOKEN:-}
       BLOG_SITE_BUILD_API_BASE: ${BLOG_SITE_BUILD_API_BASE:-https://api.github.com}
+      BLOG_SEARCH_ENABLED: ${BLOG_SEARCH_ENABLED:-true}
+      BLOG_SEARCH_URL: http://elasticsearch:9200
       JAVA_TOOL_OPTIONS: "-Xmx512m -XX:MaxMetaspaceSize=160m -XX:+UseSerialGC -Djava.awt.headless=true -Duser.timezone=Asia/Shanghai"
     ports:
       - "127.0.0.1:8080:8080"
@@ -136,7 +138,12 @@ services:
 
   # ---- 可选：只在 --profile es 时启动 ----
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    build:
+      context: ./infra/elasticsearch
+      args:
+        ES_VERSION: 8.15.3
+        IK_VERSION: 8.15.3
+    image: abyssvstar-elasticsearch-ik:8.15.3
     container_name: blog-es
     profiles: ["es"]
     restart: unless-stopped

@@ -8,6 +8,7 @@ import com.abyssvstar.blog.post.repository.PostPublicationRepository
 import com.abyssvstar.blog.post.repository.PostRepository
 import com.abyssvstar.blog.post.web.dto.PostResponse
 import com.abyssvstar.blog.post.web.dto.PreviewResponse
+import com.abyssvstar.blog.search.sync.PostSearchSyncService
 import com.abyssvstar.blog.shared.domain.Visibility
 import com.abyssvstar.blog.shared.util.MarkdownRenderer
 import com.abyssvstar.blog.shared.util.TextMetrics
@@ -37,6 +38,7 @@ class PublishService(
     private val siteBuilds: SiteBuildService,
     private val objectMapper: ObjectMapper,
     private val postService: PostService,
+    private val searchSync: PostSearchSyncService,
 ) {
 
     @Transactional
@@ -68,6 +70,7 @@ class PublishService(
         post.lastPublishedAt = now
         post.publishAt = null
         if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
+        searchSync.request(postId)
 
         return postService.getForAdmin(postId)
     }
@@ -87,9 +90,26 @@ class PublishService(
 
         post.status = PostStatus.ARCHIVED
         if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
+        searchSync.request(postId)
 
         siteBuilds.requestBuild("post.archived:$postId")
         return postService.getForAdmin(postId)
+    }
+
+    /**
+     * 定时任务专用：重读状态、确认仍然「排期中 + 公开 + 已到点」，再走和手动发布相同的流程。
+     *
+     * 扫描和真正发布之间有时间差，所以不能信扫描结果。这里在事务里锁住该行再复核：
+     * 用户同时取消排期时，两边会在这一行上串行化，不会出现刚取消又被后台发出去。
+     */
+    @Transactional
+    fun publishScheduled(postId: Long): PostResponse? {
+        val post = posts.findByIdForUpdate(postId) ?: return null
+        if (post.status != PostStatus.SCHEDULED) return null
+        if (post.visibility != Visibility.PUBLIC) return null
+        val publishAt = post.publishAt ?: return null
+        if (publishAt.isAfter(Instant.now())) return null
+        return publish(postId)
     }
 
     /** 恢复 = 重新发布一次，快照会按当前工作副本重建。 */
@@ -162,6 +182,7 @@ class PublishService(
                 title = post.title,
                 summary = requireNotNull(post.summary),
                 html = html,
+                contentMd = post.contentMd,
                 // 封面在发布时定格成 URL 快照：以后换图床地址（public-base-url 是配置项），线上内容不受影响
                 coverUrl = media.findPublicUrl(post.coverAssetId),
                 tags = objectMapper.writeValueAsString(tagNames),

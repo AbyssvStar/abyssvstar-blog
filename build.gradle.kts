@@ -48,6 +48,9 @@ dependencies {
     implementation("org.commonmark:commonmark-ext-autolink:0.24.0")
     implementation("org.commonmark:commonmark-ext-task-list-items:0.24.0")
 
+    // 搜索需要把已发布 HTML 转成纯文本；旧快照没有 Markdown 时也靠它兜底。
+    implementation("org.jsoup:jsoup:1.18.3")
+
     // 中文标题转拼音，用来生成 slug。单个 jar，无传递依赖
     implementation("com.belerweb:pinyin4j:2.5.1")
 

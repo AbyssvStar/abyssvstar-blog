@@ -60,30 +60,19 @@ class TagService(
     private fun findOrCreate(name: String): Tag {
         tags.selectOne(QueryWrapper<Tag>().eq("name", name))?.let { return it }
 
-        val created = Tag(name = name, slug = uniqueSlug(name))
-        try {
-            tags.insert(created)
-            return created
-        } catch (ex: Exception) {
-            // 并发下别人刚插了同名标签，唯一索引会挡住；重新查一次即可
-            return tags.selectOne(QueryWrapper<Tag>().eq("name", name))
-                ?: throw BusinessException(ErrorCode.INTERNAL_ERROR, "标签创建失败：$name")
-        }
-    }
-
-    /** tags.slug 也是唯一的，拼音撞车（同名不同字、大小写差异）时加序号。 */
-    private fun uniqueSlug(name: String): String {
+        // 同名或同 slug 被占时 ON CONFLICT 返回 0，不会制造事务错误；撞 slug 就换序号重试
         val base = Slugify.from(name).ifBlank { "tag" }
-        if (!slugTaken(base)) return base
-        for (n in 2..MAX_SLUG_ATTEMPTS) {
-            val candidate = "$base-$n"
-            if (!slugTaken(candidate)) return candidate
+        repeat(MAX_SLUG_ATTEMPTS) { attempt ->
+            val slug = if (attempt == 0) base else "$base-${attempt + 1}"
+            if (tags.insertIgnore(name, slug) == 1) {
+                return tags.selectOne(QueryWrapper<Tag>().eq("name", name))
+                    ?: throw BusinessException(ErrorCode.INTERNAL_ERROR, "标签创建失败：$name")
+            }
+            // 别人刚建了同名 → 直接用；否则是 slug 撞了 → 下一轮换个序号
+            tags.selectOne(QueryWrapper<Tag>().eq("name", name))?.let { return it }
         }
-        throw BusinessException(ErrorCode.CONFLICT, "标签 slug 冲突：$name")
+        throw BusinessException(ErrorCode.CONFLICT, "标签创建失败：$name")
     }
-
-    private fun slugTaken(slug: String): Boolean =
-        tags.selectCount(QueryWrapper<Tag>().eq("slug", slug)) > 0
 
     private fun validate(names: List<String>) {
         if (names.size > MAX_TAGS_PER_POST) throw BusinessException(ErrorCode.TOO_MANY_TAGS)

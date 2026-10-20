@@ -57,7 +57,9 @@
 
 > 这是 IK 的官方推荐组合。反过来的话召回和精度都会掉。
 
-**标题权重**靠查询时的 `multi_match` 的 `^` 提权（`title^3 summary^1.5 body`），不靠 mapping 的 `boost`（mapping boost 已废弃）。
+**标题权重**靠查询时的 `multi_match` 的 `^` 提权（`title^3 tags^2 summary^1.5 body`），不靠 mapping 的 `boost`（mapping boost 已废弃）。
+
+`tags` 是 `keyword`，只能整词命中（`admin` 命中，`adm` 不命中）——这正好符合「点一个标签去搜」的用法。站点搜索页的「试试搜索」就是用标签名当关键词。
 
 ---
 
@@ -94,7 +96,8 @@
 
 ## 4. chunk 切分规则
 
-输入是发布快照的 Markdown，输出是一组 chunk。
+输入是发布快照的 Markdown（`post_publications.content_md`），输出是一组 chunk。
+V11 之前的快照没有这份原文，切分时退化为从 `html` 提取文本；下一次发布会自然补上。
 
 ```
 用 CommonMark AST 遍历，维护一个「标题栈」：
@@ -124,35 +127,38 @@
 ### 5.1 主路径
 
 ```
-发布事务提交后（异步，失败不影响发布）：
-  1. 按 post_publications 的内容切 chunk
-  2. Bulk 写入：
-       - blog_article：UPSERT 文章级文档
-       - blog_chunk：先 DELETE 该 postId 的所有旧 chunk，再 Bulk 插入新 chunk
-  3. 成功 → posts.es_sync_status = 'SYNCED', es_synced_at = now()
-     失败 → posts.es_sync_status = 'FAILED'
+发布事务内：
+  posts.es_sync_status = 'PENDING'，es_next_retry_at = now()
+
+事务提交后（异步，失败不影响发布）：
+  1. 按 post_publications.content_md 切 chunk（老快照退化为 HTML 文本）
+  2. 写入 blog_article
+  3. 按 postId 删除旧 chunk，再 Bulk 插入新 chunk
+  4. 成功 → SYNCED，失败 → FAILED + attempts + 指数退避
 ```
 
 **为什么 chunk 要先删后插**：文章改短了以后，旧的多余 chunk 会残留在索引里，搜到就是幽灵内容。**先按 `postId` 删干净再插**，简单且不会错。用 `delete_by_query` + `bulk`，不要逐条删。
 
-**`contentHash` 的作用**：索引前比对 `blog_article` 里已有的 `contentHash`，**相同就直接跳过**（自动保存可能触发多次同步请求，这是省钱省 IO 的第一道闸）。
+**为什么不再靠 `contentHash` 跳过**：自动保存本身不会触发同步，PENDING 状态已经是第一道闸。`contentHash` 继续保留在文档里，供后续重建和诊断比对。
 
 ### 5.2 补偿任务
 
 ```
-@Scheduled(fixedDelay = 60s)
+@Scheduled(fixedDelay = 10s)
   SELECT * FROM posts
-   WHERE es_sync_status = 'FAILED' AND deleted_at IS NULL
-   ORDER BY updated_at DESC LIMIT 20
-  → 重新走同步流程；连续失败 5 次 → 记 ERROR 日志并告警
+   WHERE es_sync_status IN ('PENDING', 'FAILED')
+     AND (es_next_retry_at IS NULL OR es_next_retry_at <= now())
+   ORDER BY es_next_retry_at, id LIMIT 20
+  → 重新走同步流程；失败按 1m / 2m / 4m ... 最多 15m 退避
+  → 连续失败 5 次起记 ERROR 日志，但不停止后续重试
 ```
 
 | 边界场景 | 处理 |
 |---------|------|
 | ES 长时间不可用 | 补偿任务持续重试；搜索结果自动降级到 PG，**站不会挂** |
 | 文章被删除 / 转私密 | `es_sync_status = 'SKIPPED'`，并从两个索引中删除文档 |
-| 需要全量重建 | 后台「重建索引」按钮 → 清空索引 → 遍历所有发布快照重新写入（分批 + 限速，别打满内存） |
-| 补偿任务与发布同时发生 | 以 `contentHash` 为幂等键，重复写入结果一致 |
+| 需要全量重建 | `POST /admin/api/search/reindex`：重建 article/chunk 索引，所有公开快照重新排队；重建期间搜索走 PG |
+| 补偿任务与发布同时发生 | 单线程串行写入，文章级与 chunk 文档使用稳定 id，重复写入结果一致 |
 
 > **绝不把 ES 写入放进发布事务。** 发布是作者的动作，索引是衍生物。ES 挂了必须仍然能发文——这是定下的降级原则。
 
@@ -166,11 +172,11 @@ GET /api/v1/search?q=xxx&page=1&size=10
 
 ```
 1. 查询 blog_article：
-     multi_match { query: q, fields: ["title^3", "summary^1.5", "body"] }
+     multi_match { query: q, fields: ["title^3", "tags^2", "summary^1.5", "body"] }
      + docType 过滤 + publishedAt 排序权重
 2. 高亮：title / summary / body 片段，用 <mark> 包裹
 3. ES 异常 → 降级 PostgresFallbackAdapter：
-     SELECT ... WHERE title ILIKE '%q%' OR summary ILIKE '%q%'
+     SELECT ... WHERE title ILIKE '%q%' OR summary ILIKE '%q%' OR tags::text ILIKE '%q%'
      ORDER BY similarity(title, q) DESC     -- pg_trgm
      结果标注 degraded: true，code 60001，HTTP 200
 ```
