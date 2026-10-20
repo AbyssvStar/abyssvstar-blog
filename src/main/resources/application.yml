@@ -107,6 +107,21 @@ blog:
     key-prefix: blog:rl
     # IP 哈希盐。换掉后已有的限流计数会失效
     ip-salt: ${BLOG_IP_SALT:abyssvstar-blog}
+  search:
+    enabled: ${BLOG_SEARCH_ENABLED:true}
+    url: ${BLOG_SEARCH_URL:http://localhost:9200}
+    connect-timeout: 2s
+    request-timeout: 900ms
+    index-timeout: 10s
+    article-index: blog_article
+    chunk-index: blog_chunk
+    qa-index: blog_qa_cache
+    embedding-model: BAAI/bge-m3
+    embedding-dims: 1024
+    sync-scan-interval-ms: 10000
+    sync-initial-delay-ms: 15000
+    sync-batch-size: 20
+    sync-max-retry-delay: 15m
   storage:
     endpoint: ${BLOG_STORAGE_ENDPOINT:http://localhost:9000}
     # 启动期强校验：未配置就让应用启动失败，不做降级

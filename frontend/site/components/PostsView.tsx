@@ -11,7 +11,8 @@ export async function PostsView() {
   const [posts, tags] = await Promise.all([getPosts(), getTags()])
 
   return (
-    <div className="wrap" style={{ padding: '3rem 0 4rem' }}>
+    // 只设上下：写 padding 简写会把 .wrap 的左右内边距覆盖成 0，窄屏上内容就贴到屏幕边
+    <div className="wrap" style={{ paddingTop: '3rem', paddingBottom: '4rem' }}>
       <header style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.8rem' }}>文章</h1>
       </header>

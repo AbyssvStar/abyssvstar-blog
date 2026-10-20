@@ -8,6 +8,7 @@ import com.abyssvstar.blog.post.repository.PostPublicationRepository
 import com.abyssvstar.blog.post.repository.PostRepository
 import com.abyssvstar.blog.post.web.dto.PostResponse
 import com.abyssvstar.blog.post.web.dto.PreviewResponse
+import com.abyssvstar.blog.search.sync.PostSearchSyncService
 import com.abyssvstar.blog.shared.domain.Visibility
 import com.abyssvstar.blog.shared.util.MarkdownRenderer
 import com.abyssvstar.blog.shared.util.TextMetrics
@@ -37,6 +38,7 @@ class PublishService(
     private val siteBuilds: SiteBuildService,
     private val objectMapper: ObjectMapper,
     private val postService: PostService,
+    private val searchSync: PostSearchSyncService,
 ) {
 
     @Transactional
@@ -68,6 +70,7 @@ class PublishService(
         post.lastPublishedAt = now
         post.publishAt = null
         if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
+        searchSync.request(postId)
 
         return postService.getForAdmin(postId)
     }
@@ -87,6 +90,7 @@ class PublishService(
 
         post.status = PostStatus.ARCHIVED
         if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
+        searchSync.request(postId)
 
         siteBuilds.requestBuild("post.archived:$postId")
         return postService.getForAdmin(postId)

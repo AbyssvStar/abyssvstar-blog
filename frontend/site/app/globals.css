@@ -489,6 +489,28 @@ button.chip:disabled {
   padding-top: 0.15rem;
 }
 
+/*
+ * 标题让位给右侧标签。
+ *
+ * 没有 min-width: 0 的话，flex 项的最小宽度是内容宽度 —— 标题一长就把标签挤出容器，
+ * 那和以前 slice(0,2) 的效果是一样的（看起来都像"标签没了"）。
+ */
+.list__title {
+  flex: 1 1 auto;
+  font-weight: 500;
+  min-width: 0;
+}
+
+/* 标签全量显示：条数多就在自己的格子里换行，不截断、也不换省略号 */
+.list__tags {
+  flex: 0 1 auto;
+  font-size: 0.82rem;
+  margin-left: auto;
+  /* 同样要能缩到内容宽度以下，否则窄屏上这行会把整个页面撑宽 */
+  min-width: 0;
+  text-align: right;
+}
+
 /* ---------- 文章页 ---------- */
 /* 进度条容器：只做定位，不再自己上色（旧规则留着会让它变成一条满宽色带） */
 .progress {
@@ -2022,34 +2044,212 @@ button.chip:disabled {
 
 /* ---------- 彩蛋：一炮星光 ---------- */
 .egg-burst {
-  animation: egg-burst 1.9s ease-out both;
-  background-image:
-    radial-gradient(2px 2px at 12% 24%, #fff, transparent 60%),
-    radial-gradient(2px 2px at 26% 71%, var(--aqua), transparent 60%),
-    radial-gradient(2px 2px at 38% 16%, #fff, transparent 60%),
-    radial-gradient(3px 3px at 52% 62%, var(--sky), transparent 60%),
-    radial-gradient(2px 2px at 64% 22%, #fff, transparent 60%),
-    radial-gradient(2px 2px at 71% 78%, var(--aqua), transparent 60%),
-    radial-gradient(2px 2px at 84% 34%, #fff, transparent 60%),
-    radial-gradient(2px 2px at 92% 66%, var(--sky), transparent 60%),
-    radial-gradient(44rem 28rem at 50% 48%, var(--accent-glow), transparent 70%);
+  --burst-angle: 0deg;
+  --burst-x: 50%;
+  --burst-y: 46%;
+  animation: egg-burst-shell 1.9s ease-out both;
   inset: 0;
+  mix-blend-mode: screen;
+  overflow: hidden;
   pointer-events: none;
   position: fixed;
   z-index: 40;
 }
 
-@keyframes egg-burst {
+.egg-burst::before {
+  animation: egg-burst-stars 1.9s ease-out both;
+  background-image:
+    radial-gradient(1.5px 1.5px at 10% 22%, var(--text), transparent 70%),
+    radial-gradient(2px 2px at 18% 68%, var(--aqua), transparent 70%),
+    radial-gradient(2.5px 2.5px at 30% 34%, var(--text), transparent 70%),
+    radial-gradient(2px 2px at 39% 79%, var(--sky), transparent 70%),
+    radial-gradient(3px 3px at 47% 18%, var(--text), transparent 70%),
+    radial-gradient(1.5px 1.5px at 58% 65%, var(--aqua), transparent 70%),
+    radial-gradient(2px 2px at 66% 27%, var(--text), transparent 70%),
+    radial-gradient(2.5px 2.5px at 76% 74%, var(--sky), transparent 70%),
+    radial-gradient(1.5px 1.5px at 87% 39%, var(--text), transparent 70%),
+    radial-gradient(2px 2px at 94% 63%, var(--aqua), transparent 70%),
+    radial-gradient(2px 2px at 22% 12%, var(--accent), transparent 70%),
+    radial-gradient(2px 2px at 82% 14%, var(--accent), transparent 70%);
+  content: '';
+  inset: -12%;
+  opacity: 0;
+}
+
+.egg-burst::after {
+  animation: egg-burst-cross 1.9s ease-out both;
+  background:
+    linear-gradient(90deg, transparent 0 45%, color-mix(in srgb, var(--text) 74%, transparent) 50%, transparent 55% 100%) center / 100% 1px no-repeat,
+    linear-gradient(0deg, transparent 0 45%, color-mix(in srgb, var(--text) 74%, transparent) 50%, transparent 55% 100%) center / 1px 100% no-repeat;
+  content: '';
+  height: min(52rem, 118vw);
+  left: var(--burst-x);
+  opacity: 0;
+  position: absolute;
+  top: var(--burst-y);
+  transform: translate(-50%, -50%) rotate(var(--burst-angle)) scaleX(0.1);
+  width: min(52rem, 118vw);
+}
+
+.egg-burst__halo,
+.egg-burst__rays,
+.egg-burst__ring {
+  left: var(--burst-x);
+  position: absolute;
+  top: var(--burst-y);
+  transform: translate(-50%, -50%) scale(0.15);
+}
+
+.egg-burst__halo {
+  animation: egg-burst-halo 1.9s ease-out both;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--text) 96%, transparent) 0 2%,
+    color-mix(in srgb, var(--accent) 62%, transparent) 11%,
+    var(--accent-glow) 28%,
+    transparent 68%
+  );
+  border-radius: 50%;
+  filter: blur(1px);
+  height: min(22rem, 62vw);
+  opacity: 0;
+  width: min(22rem, 62vw);
+}
+
+.egg-burst__rays {
+  animation: egg-burst-rays 1.9s cubic-bezier(0.16, 0.72, 0.18, 1) both;
+  aspect-ratio: 1;
+  background: repeating-conic-gradient(
+    from 0deg,
+    transparent 0deg 10.5deg,
+    color-mix(in srgb, var(--accent) 52%, transparent) 11deg 11.8deg,
+    transparent 12.6deg 24deg
+  );
+  border-radius: 50%;
+  mask-image: radial-gradient(circle, transparent 0 7%, #000 17%, rgb(0 0 0 / 72%) 43%, transparent 72%);
+  opacity: 0;
+  width: min(46rem, 108vw);
+}
+
+.egg-burst__ring {
+  animation: egg-burst-ring 1.9s ease-out both;
+  border: 1px solid color-mix(in srgb, var(--accent) 78%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 1.5rem color-mix(in srgb, var(--accent) 42%, transparent),
+    inset 0 0 1rem color-mix(in srgb, var(--sky) 34%, transparent);
+  height: 5rem;
+  opacity: 0;
+  width: 5rem;
+}
+
+.egg-burst__ring--far {
+  animation-name: egg-burst-ring-far;
+  border-color: color-mix(in srgb, var(--sky) 64%, transparent);
+  height: 7rem;
+  width: 7rem;
+}
+
+:root[data-theme='light'] .egg-burst {
+  mix-blend-mode: multiply;
+}
+
+@keyframes egg-burst-shell {
   0% {
     opacity: 0;
-    transform: scale(0.6);
   }
-  22% {
+  10% {
+    opacity: 1;
+  }
+  58% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes egg-burst-stars {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  18% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.14);
+  }
+}
+
+@keyframes egg-burst-cross {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--burst-angle)) scaleX(0.08);
+  }
+  12% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: scale(1.4);
+    transform: translate(-50%, -50%) rotate(calc(var(--burst-angle) + 9deg)) scaleX(1.35);
+  }
+}
+
+@keyframes egg-burst-halo {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.15);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.5);
+  }
+}
+
+@keyframes egg-burst-rays {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--burst-angle)) scale(0.18);
+  }
+  18% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(calc(var(--burst-angle) + 54deg)) scale(1.35);
+  }
+}
+
+@keyframes egg-burst-ring {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.18);
+  }
+  16% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(5.4);
+  }
+}
+
+@keyframes egg-burst-ring-far {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.1);
+  }
+  22% {
+    opacity: 0.58;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(7.2);
   }
 }
 
@@ -2408,4 +2608,334 @@ button.chip:disabled {
   .hero-stage__title-inner {
     transform: none;
   }
+}
+
+/* ---------- 搜索页：同一套冷色细边框，不另起视觉体系 ---------- */
+.header-icon {
+  align-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--text-muted);
+  display: inline-flex;
+  flex: none;
+  height: 1.95rem;
+  justify-content: center;
+  margin-left: 0.4rem;
+  padding: 0.3rem;
+  transition: border-color 0.15s, color 0.15s;
+  width: 1.95rem;
+}
+
+.header-icon svg {
+  height: 100%;
+  width: 100%;
+}
+
+.header-icon:hover,
+.header-icon[data-active='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.search-page {
+  padding: 3.5rem 0 5rem;
+  position: relative;
+}
+
+/*
+ * 用和顶栏、页脚同一条版心（.wrap 的 78rem），不要把内容列收窄。
+ *
+ * 收窄只会把"空白"从行内挪到页面上：内容列 54rem 时，右边会空出整块 ——
+ * 那是同一个毛病的另一种形状。行内的空白靠"标题在左、标签和日期在右"来占满，
+ * 不该靠缩窄页面。
+ */
+
+/*
+ * 一层没有边缘的同色蒙版。
+ *
+ * 结果是压在动态星野/粒子上的，纯靠留白会糊成一片；但又不能加面板 —— 面板会画出
+ * 一条右边界，内容短的时候右半就成了"被浪费的空白"。所以用一块和页面同色的遮罩
+ * 把背后压暗，四周再用 mask 羽化掉，于是它只降低背景的存在感，不产生任何形状。
+ */
+.search-page::before {
+  -webkit-mask-image: radial-gradient(115% 88% at 46% 36%, #000 36%, transparent 76%);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  content: '';
+  inset: -2rem -3rem;
+  mask-image: radial-gradient(115% 88% at 46% 36%, #000 36%, transparent 76%);
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+
+.search-page__head {
+  margin-bottom: 1.5rem;
+}
+
+.search-page__head h1 {
+  font-size: 1.9rem;
+  margin: 0.55rem 0 0.5rem;
+}
+
+.search-form {
+  align-items: center;
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin-bottom: 1.25rem;
+  padding: 0.42rem;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+}
+
+.search-form:focus-within {
+  background: var(--bg-elevated);
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 12px 34px rgba(0, 0, 0, 0.2);
+}
+
+.search-form__icon {
+  color: var(--text-faint);
+  display: inline-flex;
+  height: 1.15rem;
+  margin-left: 0.55rem;
+  transition: color 0.18s;
+  width: 1.15rem;
+}
+
+.search-form__icon svg {
+  height: 100%;
+  width: 100%;
+}
+
+.search-form:focus-within .search-form__icon {
+  color: var(--accent);
+}
+
+.search-form__input {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  flex: 1;
+  font-size: 1rem;
+  min-width: 0;
+  outline: 0;
+  padding: 0.72rem 0.35rem;
+}
+
+.search-form__input::placeholder {
+  color: var(--text-faint);
+}
+
+.search-form__submit {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  color: var(--bg);
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 2.55rem;
+  padding: 0 1.25rem;
+}
+
+.search-form__submit:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.search-notice,
+.search-banner {
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.search-notice {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.search-count {
+  font-size: 0.76rem;
+  margin: 0 0 0.8rem;
+}
+
+/* 没有结果的提示：虚线框读起来像「还没做完」，换成一条发丝线 */
+.search-empty {
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-faint);
+  padding: 1.6rem 0;
+  text-align: center;
+}
+
+/* 空状态：一行提示 + 一串可以直接点的词，比一个空框子有用 */
+.search-start {
+  margin-top: 0.4rem;
+}
+
+.search-start__hint {
+  font-size: 0.76rem;
+  margin: 0 0 0.85rem;
+}
+
+.search-start__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.search-start__chip span {
+  color: var(--accent);
+  margin-left: 0.1rem;
+}
+
+.search-start__note {
+  font-size: 0.72rem;
+  margin: 0.85rem 0 0;
+}
+
+/*
+ * 结果是一份清单，没有容器盒子。
+ *
+ * 之前试过"每条一张卡"和"整块一个面板"，两次都撞上同一个问题：只要画出一条右边界，
+ * 内容短的那条右半就成了一块被浪费的空白。去掉盒子之后，短内容只是一行短内容。
+ * 背景的干扰由 .search-page::before 那层羽化蒙版负责，不靠容器。
+ */
+.search-results {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.6rem;
+}
+
+.search-result {
+  border-bottom: 1px solid var(--border-soft);
+  border-left: 2px solid transparent;
+  color: inherit;
+  display: block;
+  padding: 0.95rem 0.9rem 0.95rem 0.85rem;
+  text-decoration: none;
+  transition: background 0.18s, border-left-color 0.18s;
+}
+
+.search-result:first-child {
+  border-top: 1px solid var(--border-soft);
+}
+
+/* 悬停提亮用 --text 的低透明度：暗色是加白、浅色是压深，两套都成立 */
+.search-result:hover {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border-left-color: var(--accent);
+}
+
+.search-result:focus-visible {
+  border-left-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* 标题在左，标签和日期贴到右端：右半边有内容压着，行才不会显得空 */
+.search-result__head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+}
+
+.search-result__title {
+  flex: 1 1 auto;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  margin: 0;
+  min-width: 0;
+  transition: color 0.18s;
+}
+
+.search-result:hover .search-result__title {
+  color: var(--accent);
+}
+
+/*
+ * 摘要和命中片段只显示一段。
+ * 两段并列时读者不知道该先读哪个，而且片段（更重）排在摘要后面，层级是反的。
+ * 行长收到 --readw（46rem）：中文一行超过 45 字就开始糊成一片。
+ */
+.search-result__text {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.75;
+  margin: 0;
+  max-width: var(--readw);
+}
+
+/* 高亮只"指一下"：换字色 + 一条淡下划线，不铺底色 —— 铺底色读起来像涂抹 */
+.search-result mark {
+  background: none;
+  color: var(--accent);
+  padding: 0;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* 标签和日期共处右端；标签在前、日期最右，像一行的落款 */
+.search-result__meta {
+  align-items: baseline;
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.search-result__meta .chip {
+  pointer-events: none;
+}
+
+.search-result__date {
+  flex: none;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 40rem) {
+  .search-form {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .search-form__submit {
+    grid-column: 1 / -1;
+    min-height: 2.4rem;
+    padding: 0.7rem 1rem;
+  }
+
+  .search-result {
+    padding: 0.95rem 0.8rem;
+  }
+
+  /* 窄屏上标题和日期放不下一行，让日期掉到下一行 */
+  .search-result__head {
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+  }
+
+  .header-icon {
+    align-self: flex-start;
+    margin: 0.45rem 0 0 0.15rem;
+  }
+}
+.search-pager {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.5rem;
 }

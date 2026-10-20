@@ -182,7 +182,7 @@ Header: X-Export-Token: <token>
 > 状态标记：`✅` 已实现 ｜ `🚧` 未实现（在计划内）｜ `❌` 刻意不做。
 > 实现进度按 `03-roadmap.md` 的阶段门推进。
 >
-> **截至 G3 通过时，认证、文章、排期、媒体上传、站点配置和构建记录已实现；搜索仍是 G4。**
+> **截至 G4 通过时，认证、文章、排期、媒体上传、站点配置、构建记录与站内搜索已实现。**
 
 ### 7.1 公开 API（`/api/v1`）
 
@@ -194,7 +194,7 @@ Header: X-Export-Token: <token>
 | GET | `/notes/{id}` | 🚧 | 单条动态 |
 | GET | `/tags` | ❌ | **刻意不做**：静态站构建时用 `/export` 拿标签，多一个公开入口只会多一处要维护、要限流、要保持一致性的地方 |
 | GET | `/archive` | 🚧 | 独立归档统计接口，当前公开站直接基于 `/export` 在构建期生成归档页 |
-| GET | `/search?q=` | 🚧 | 搜索（ES 主，PG 降级）—— G4 |
+| GET | `/search?q=` | ✅ | 搜索（ES 主，PG 降级；降级返回 HTTP 200 + code 60001） |
 | POST | `/views` | 🚧 | 阅读量打点（**幂等、永不报错、返回 204**） |
 | GET | `/comments?postId=` | 🚧 | 已审核留言 |
 | POST | `/comments` | 🚧 | 提交留言（默认 `PENDING`） |
@@ -216,6 +216,7 @@ Header: X-Export-Token: <token>
 | 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | 🚧 |
 | 站点配置 | `GET/PUT /site-config`、`POST /site-config/preview` | ✅ 站名 / 简介 / 关于页正文（Markdown）/ 封面图 / 头像；保存即记一条构建请求 |
 | 构建 | `GET /builds`、`POST /builds/trigger`（手动触发） | ✅ 10s 扫描 + 30s 防抖合并成一次 `repository_dispatch`；需 `BLOG_SITE_BUILD_ENABLED=true` + token 才真的发出去 |
+| 搜索 | `GET /search/status`、`POST /search/reindex` | ✅ ES 状态、积压数、全量重建；重建期间公开搜索走 PG |
 | 统计 | `GET /stats`（阅读量 / AI 成本 / 内存快照） | 🚧 待做 |
 | AI | `POST /ai/summary`、`/ai/tags`、`/ai/related` | 🚧 G5 |
 

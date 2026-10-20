@@ -2,6 +2,7 @@ package com.abyssvstar.blog.post.repository
 
 import com.abyssvstar.blog.post.domain.Post
 import com.abyssvstar.blog.post.domain.PostStatus
+import com.abyssvstar.blog.shared.domain.EsSyncStatus
 import com.abyssvstar.blog.shared.domain.Visibility
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper
@@ -18,6 +19,21 @@ class PostRepository(private val mapper: PostMapper) {
 
     /** 按 slug 取未删除的文章。 */
     fun findBySlug(slug: String): Post? = mapper.selectOne(active().eq("slug", slug))
+
+    /** 搜索同步需要处理软删除后的行，不能套 active() 过滤。 */
+    fun findByIdIncludingDeleted(id: Long): Post? = mapper.selectById(id)
+
+    /** 公开可见的文章，按 id 取。搜索命中后必须经过它再次过滤。 */
+    fun findPublicById(id: Long): Post? =
+        mapper.selectOne(PublishedContentSpec.wrapper().eq("id", id))
+
+    fun findPublicByIds(ids: Collection<Long>): List<Post> {
+        if (ids.isEmpty()) return emptyList()
+        return mapper.selectList(PublishedContentSpec.wrapper().`in`("id", ids))
+    }
+
+    fun findAllPublicIds(): List<Long> =
+        mapper.selectList(PublishedContentSpec.wrapper()).mapNotNull { it.id }
 
     /** slug 是否已被占用。排除自己和已软删除的。 */
     fun isSlugTaken(slug: String, excludeId: Long? = null): Boolean {
@@ -107,6 +123,59 @@ class PostRepository(private val mapper: PostMapper) {
             Page(page.toLong(), size.toLong()),
             active().orderByDesc("updated_at", "id"),
         )
+
+    /** 补偿任务只取真正等待索引的行；退避时间未到的失败项不会反复打 ES。 */
+    fun findDueSearchSync(limit: Int): List<Post> {
+        val now = Instant.now()
+        return mapper.selectList(
+            QueryWrapper<Post>()
+                .`in`("es_sync_status", EsSyncStatus.PENDING.name, EsSyncStatus.FAILED.name)
+                .and { it.isNull("es_next_retry_at").or().le("es_next_retry_at", now) }
+                .orderByAsc("es_next_retry_at", "id")
+                .last("LIMIT $limit"),
+        )
+    }
+
+    fun markSearchPending(id: Long) {
+        mapper.update(
+            null,
+            UpdateWrapper<Post>()
+                .eq("id", id)
+                .set("es_sync_status", EsSyncStatus.PENDING.name)
+                .set("es_sync_attempts", 0)
+                .set("es_next_retry_at", Instant.now())
+                .set("es_synced_at", null)
+                .set("es_last_error", null),
+        )
+    }
+
+    fun markSearchSynced(id: Long, status: EsSyncStatus) {
+        mapper.update(
+            null,
+            UpdateWrapper<Post>()
+                .eq("id", id)
+                .set("es_sync_status", status.name)
+                .set("es_sync_attempts", 0)
+                .set("es_next_retry_at", null)
+                .set("es_synced_at", Instant.now())
+                .set("es_last_error", null),
+        )
+    }
+
+    fun countSearchStatus(status: EsSyncStatus): Long =
+        mapper.selectCount(QueryWrapper<Post>().eq("es_sync_status", status.name))
+
+    fun markSearchFailed(id: Long, attempts: Int, retryAt: Instant, error: String) {
+        mapper.update(
+            null,
+            UpdateWrapper<Post>()
+                .eq("id", id)
+                .set("es_sync_status", EsSyncStatus.FAILED.name)
+                .set("es_sync_attempts", attempts)
+                .set("es_next_retry_at", retryAt)
+                .set("es_last_error", error.take(1000)),
+        )
+    }
 
     fun insert(post: Post) {
         mapper.insert(post)

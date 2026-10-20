@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
 /** 终端里的 `star` 命令也放这一炮，所以事件名拿出来共用 */
 export const BURST_EVENT = 'abyssvstar:burst'
@@ -22,6 +22,13 @@ const SEQUENCE = [
   'a',
 ]
 
+interface BurstLayer {
+  id: number
+  x: number
+  y: number
+  angle: number
+}
+
 /**
  * 小彩蛋：↑↑↓↓←→←→BA。
  *
@@ -29,18 +36,29 @@ const SEQUENCE = [
  * 「自己找到」，不是每次来访都被它打断。
  */
 export function KonamiEgg() {
-  const [burst, setBurst] = useState(false)
+  const [bursts, setBursts] = useState<BurstLayer[]>([])
   const [toast, setToast] = useState(false)
+  const burstId = useRef(0)
+  const burstTimers = useRef(new Set<number>())
 
   useEffect(() => {
     let index = 0
-    let burstTimer: number | null = null
     let toastTimer: number | null = null
 
     function boom() {
-      setBurst(true)
-      if (burstTimer !== null) window.clearTimeout(burstTimer)
-      burstTimer = window.setTimeout(() => setBurst(false), 1900)
+      const id = ++burstId.current
+      const layer: BurstLayer = {
+        id,
+        x: 28 + Math.random() * 44,
+        y: 24 + Math.random() * 42,
+        angle: Math.random() * 360,
+      }
+      setBursts((current) => [...current.slice(-(MAX_BURST_LAYERS - 1)), layer])
+      const timer = window.setTimeout(() => {
+        burstTimers.current.delete(timer)
+        setBursts((current) => current.filter((item) => item.id !== id))
+      }, BURST_DURATION_MS)
+      burstTimers.current.add(timer)
     }
 
     function onKey(event: KeyboardEvent) {
@@ -69,14 +87,33 @@ export function KonamiEgg() {
     return () => {
       window.removeEventListener('keydown', onKey)
       window.removeEventListener(BURST_EVENT, boom)
-      if (burstTimer !== null) window.clearTimeout(burstTimer)
+      burstTimers.current.forEach((timer) => window.clearTimeout(timer))
+      burstTimers.current.clear()
       if (toastTimer !== null) window.clearTimeout(toastTimer)
     }
   }, [])
 
   return (
     <>
-      {burst && <div className="egg-burst" aria-hidden="true" />}
+      {bursts.map((burst) => (
+        <div
+          key={burst.id}
+          className="egg-burst"
+          aria-hidden="true"
+          style={
+            {
+              '--burst-x': `${burst.x}%`,
+              '--burst-y': `${burst.y}%`,
+              '--burst-angle': `${burst.angle}deg`,
+            } as CSSProperties
+          }
+        >
+          <span className="egg-burst__halo" />
+          <span className="egg-burst__rays" />
+          <span className="egg-burst__ring egg-burst__ring--near" />
+          <span className="egg-burst__ring egg-burst__ring--far" />
+        </div>
+      ))}
       {toast && (
         <div className="egg-toast" role="status">
           <div className="mono" style={{ color: 'var(--accent)' }}>
@@ -92,3 +129,5 @@ export function KonamiEgg() {
 }
 
 const EGG_KEY = 'abyssvstar-konami'
+const BURST_DURATION_MS = 1900
+const MAX_BURST_LAYERS = 6

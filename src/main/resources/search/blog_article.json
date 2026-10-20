@@ -1,0 +1,33 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "refresh_interval": "5s",
+    "analysis": {
+      "analyzer": {
+        "cn_index": { "type": "custom", "tokenizer": "ik_max_word" },
+        "cn_search": { "type": "custom", "tokenizer": "ik_smart" }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "_meta": {
+      "schemaVersion": 1,
+      "embeddingModel": "BAAI/bge-m3",
+      "embeddingDims": 1024
+    },
+    "properties": {
+      "docType": { "type": "keyword" },
+      "contentId": { "type": "long" },
+      "slug": { "type": "keyword" },
+      "title": { "type": "text", "analyzer": "cn_index", "search_analyzer": "cn_search" },
+      "summary": { "type": "text", "analyzer": "cn_index", "search_analyzer": "cn_search" },
+      "body": { "type": "text", "analyzer": "cn_index", "search_analyzer": "cn_search" },
+      "tags": { "type": "keyword" },
+      "publishedAt": { "type": "date" },
+      "viewCount": { "type": "long" },
+      "contentHash": { "type": "keyword" }
+    }
+  }
+}

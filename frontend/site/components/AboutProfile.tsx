@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 /**
  * 关于页的头像 + 名字 + 一句签名。
  *
  * 做成客户端组件只为一件事：头像是彩蛋。点一下它会转一圈，连点五下会换出一句平时不显示的签名。
- * 除此之外没有任何状态 —— 数据是构建时传进来的，页面上不会多一次请求。
+ * 从搜索页「搜站名」跳过来的会带 `?from=search`，那时头像会自己转一圈、签名也换一句 ——
+ * 这是搜索别名那条路唯一能给出的「你被认出来了」的回应。
  */
 export function AboutProfile({
   avatarUrl,
@@ -23,13 +24,29 @@ export function AboutProfile({
   const [spinning, setSpinning] = useState(false)
   // 头像地址来自后台的图床：404 时不能露出浏览器那个破图图标，退回自己画的四角星
   const [avatarFailed, setAvatarFailed] = useState(false)
+  const [fromSearch, setFromSearch] = useState(false)
   const eggFound = spins >= 5
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('from') !== 'search') return
+    setFromSearch(true)
+    setSpinning(true)
+    const timer = window.setTimeout(() => setSpinning(false), 700)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   function poke() {
     setSpinning(true)
     window.setTimeout(() => setSpinning(false), 700)
     setSpins((n) => n + 1)
   }
+
+  const line = eggFound
+    ? '你点我干嘛？'
+    : fromSearch
+      ? '搜过来的？你好哇！祝你天天开心！'
+      : tagline
 
   return (
     <div className="about-profile">
@@ -50,7 +67,7 @@ export function AboutProfile({
       </button>
 
       <div className="about-name">{name}</div>
-      <p className="about-tagline">{eggFound ? '你点了五下。那我也认真一点：写下去就对了。' : tagline}</p>
+      <p className="about-tagline">{line}</p>
 
       <div className="about-links">
         <a href={github} target="_blank" rel="noreferrer" aria-label="GitHub">
