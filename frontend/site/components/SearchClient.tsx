@@ -110,10 +110,13 @@ export function SearchClient() {
       <header className="search-page__head">
         <div className="kicker">SEARCH / PUBLISHED ONLY</div>
         <h1>搜索</h1>
-        <p className="muted">只检索已经发布的文章，草稿、私密与归档内容不会出现。</p>
+        <p className="muted">检索已经发布的文章</p>
       </header>
 
       <form className="search-form" onSubmit={submit} role="search">
+        <span className="search-form__icon" aria-hidden="true">
+          <SearchIcon />
+        </span>
         <input
           ref={inputRef}
           value={input}
@@ -153,11 +156,14 @@ export function SearchClient() {
       {data && data.items.length > 0 && (
         <div className="search-results">
           {data.items.map((item) => (
-            <article key={item.id} className="search-result">
+            <Link
+              key={item.id}
+              href={`/posts/${item.slug}/`}
+              className="search-result"
+              aria-label={`阅读文章：${item.title}`}
+            >
               <div className="mono faint search-result__meta">{formatDate(item.publishedAt)}</div>
-              <h2 className="search-result__title">
-                <Link href={`/posts/${item.slug}/`}>{item.title}</Link>
-              </h2>
+              <h2 className="search-result__title">{item.title}</h2>
               <p
                 className="search-result__summary"
                 dangerouslySetInnerHTML={{ __html: item.summaryHtml }}
@@ -168,16 +174,19 @@ export function SearchClient() {
                   dangerouslySetInnerHTML={{ __html: item.bodySnippet }}
                 />
               )}
-              {item.tags.length > 0 && (
+              <div className="search-result__footer">
                 <div className="search-result__tags">
                   {item.tags.map((tag) => (
-                    <Link key={tag} href={`/posts/?tag=${encodeURIComponent(tag)}`} className="chip">
+                    <span key={tag} className="chip">
                       {tag}
-                    </Link>
+                    </span>
                   ))}
                 </div>
-              )}
-            </article>
+                <span className="search-result__open">
+                  阅读文章 <span aria-hidden="true">→</span>
+                </span>
+              </div>
+            </Link>
           ))}
         </div>
       )}
@@ -201,5 +210,14 @@ export function SearchClient() {
         </nav>
       )}
     </div>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="10.7" cy="10.7" r="6.7" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m15.7 15.7 4.1 4.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
   )
 }
