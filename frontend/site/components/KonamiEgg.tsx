@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /** 终端里的 `star` 命令也放这一炮，所以事件名拿出来共用 */
 export const BURST_EVENT = 'abyssvstar:burst'
@@ -29,18 +29,23 @@ const SEQUENCE = [
  * 「自己找到」，不是每次来访都被它打断。
  */
 export function KonamiEgg() {
-  const [burst, setBurst] = useState(false)
+  const [bursts, setBursts] = useState<number[]>([])
   const [toast, setToast] = useState(false)
+  const burstId = useRef(0)
+  const burstTimers = useRef(new Set<number>())
 
   useEffect(() => {
     let index = 0
-    let burstTimer: number | null = null
     let toastTimer: number | null = null
 
     function boom() {
-      setBurst(true)
-      if (burstTimer !== null) window.clearTimeout(burstTimer)
-      burstTimer = window.setTimeout(() => setBurst(false), 1900)
+      const id = ++burstId.current
+      setBursts((current) => [...current.slice(-(MAX_BURST_LAYERS - 1)), id])
+      const timer = window.setTimeout(() => {
+        burstTimers.current.delete(timer)
+        setBursts((current) => current.filter((item) => item !== id))
+      }, BURST_DURATION_MS)
+      burstTimers.current.add(timer)
     }
 
     function onKey(event: KeyboardEvent) {
@@ -69,14 +74,17 @@ export function KonamiEgg() {
     return () => {
       window.removeEventListener('keydown', onKey)
       window.removeEventListener(BURST_EVENT, boom)
-      if (burstTimer !== null) window.clearTimeout(burstTimer)
+      burstTimers.current.forEach((timer) => window.clearTimeout(timer))
+      burstTimers.current.clear()
       if (toastTimer !== null) window.clearTimeout(toastTimer)
     }
   }, [])
 
   return (
     <>
-      {burst && <div className="egg-burst" aria-hidden="true" />}
+      {bursts.map((id) => (
+        <div key={id} className="egg-burst" aria-hidden="true" />
+      ))}
       {toast && (
         <div className="egg-toast" role="status">
           <div className="mono" style={{ color: 'var(--accent)' }}>
@@ -92,3 +100,5 @@ export function KonamiEgg() {
 }
 
 const EGG_KEY = 'abyssvstar-konami'
+const BURST_DURATION_MS = 1900
+const MAX_BURST_LAYERS = 6
