@@ -30,6 +30,7 @@ interface PostgresSearchMapper {
                 OR pp.summary ILIKE #{pattern} ESCAPE '\'
                 OR COALESCE(pp.content_md, '') ILIKE #{pattern} ESCAPE '\'
                 OR pp.html ILIKE #{pattern} ESCAPE '\'
+                OR pp.tags::text ILIKE #{pattern} ESCAPE '\'
            )
          ORDER BY GREATEST(similarity(pp.title, #{query}), similarity(pp.summary, #{query})) DESC,
                   pp.published_at DESC,
@@ -59,6 +60,7 @@ interface PostgresSearchMapper {
                 OR pp.summary ILIKE #{pattern} ESCAPE '\'
                 OR COALESCE(pp.content_md, '') ILIKE #{pattern} ESCAPE '\'
                 OR pp.html ILIKE #{pattern} ESCAPE '\'
+                OR pp.tags::text ILIKE #{pattern} ESCAPE '\'
            )
         """,
     )

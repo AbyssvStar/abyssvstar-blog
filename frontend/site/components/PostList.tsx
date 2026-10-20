@@ -67,12 +67,10 @@ export function PostRows({ posts }: { posts: ExportPost[] }) {
     <div className="list">
       {posts.map((post) => (
         <Link key={post.slug} href={`/posts/${post.slug}/`} className="list__item">
-
           <span className="list__date">{formatDate(post.publishedAt)}</span>
-          <span style={{ fontWeight: 500 }}>{post.title}</span>
-          <span className="muted" style={{ fontSize: '0.82rem', marginLeft: 'auto', textAlign: 'right' }}>
-            {post.tags.slice(0, 2).join(' / ')}
-          </span>
+          <span className="list__title">{post.title}</span>
+          {/* 标签一个都不能少：以前这里 slice(0, 2)，第三个别之后的标签就永远看不到 */}
+          {post.tags.length > 0 && <span className="list__tags muted">{post.tags.join(' / ')}</span>}
         </Link>
       ))}
     </div>

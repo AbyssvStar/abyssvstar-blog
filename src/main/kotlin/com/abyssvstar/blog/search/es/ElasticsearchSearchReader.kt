@@ -60,7 +60,9 @@ class ElasticsearchSearchReader(
                         mapOf(
                             "multi_match" to mapOf(
                                 "query" to query,
-                                "fields" to listOf("title^3", "summary^1.5", "body"),
+                                // tags 早就写进索引了（keyword），但查询没带上它 —— 于是「搜标签名」永远 0 条。
+                                // 权重放在标题和摘要之间：标签是作者亲手选的词，比正文里偶然出现更可信。
+                                "fields" to listOf("title^3", "tags^2", "summary^1.5", "body"),
                                 "type" to "best_fields",
                                 "minimum_should_match" to "70%",
                             ),

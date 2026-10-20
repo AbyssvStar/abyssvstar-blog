@@ -57,7 +57,9 @@
 
 > 这是 IK 的官方推荐组合。反过来的话召回和精度都会掉。
 
-**标题权重**靠查询时的 `multi_match` 的 `^` 提权（`title^3 summary^1.5 body`），不靠 mapping 的 `boost`（mapping boost 已废弃）。
+**标题权重**靠查询时的 `multi_match` 的 `^` 提权（`title^3 tags^2 summary^1.5 body`），不靠 mapping 的 `boost`（mapping boost 已废弃）。
+
+`tags` 是 `keyword`，只能整词命中（`admin` 命中，`adm` 不命中）——这正好符合「点一个标签去搜」的用法。站点搜索页的「试试搜索」就是用标签名当关键词。
 
 ---
 
@@ -170,11 +172,11 @@ GET /api/v1/search?q=xxx&page=1&size=10
 
 ```
 1. 查询 blog_article：
-     multi_match { query: q, fields: ["title^3", "summary^1.5", "body"] }
+     multi_match { query: q, fields: ["title^3", "tags^2", "summary^1.5", "body"] }
      + docType 过滤 + publishedAt 排序权重
 2. 高亮：title / summary / body 片段，用 <mark> 包裹
 3. ES 异常 → 降级 PostgresFallbackAdapter：
-     SELECT ... WHERE title ILIKE '%q%' OR summary ILIKE '%q%'
+     SELECT ... WHERE title ILIKE '%q%' OR summary ILIKE '%q%' OR tags::text ILIKE '%q%'
      ORDER BY similarity(title, q) DESC     -- pg_trgm
      结果标注 degraded: true，code 60001，HTTP 200
 ```
