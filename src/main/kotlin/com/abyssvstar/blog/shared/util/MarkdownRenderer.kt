@@ -5,8 +5,10 @@ import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.ext.task.list.items.TaskListItemsExtension
+import org.commonmark.node.Node
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
+import org.commonmark.renderer.text.TextContentRenderer
 import org.springframework.stereotype.Component
 
 /**
@@ -32,6 +34,12 @@ class MarkdownRenderer {
 
     private val parser: Parser = Parser.builder().extensions(extensions).build()
     private val renderer: HtmlRenderer = HtmlRenderer.builder().extensions(extensions).build()
+    private val textRenderer: TextContentRenderer = TextContentRenderer.builder().extensions(extensions).build()
 
     fun render(markdown: String): String = renderer.render(parser.parse(markdown))
+
+    /** 搜索切块与发布渲染共用同一套扩展，避免表格、任务列表在两边结构不同。 */
+    fun parse(markdown: String): Node = parser.parse(markdown)
+
+    fun plainText(node: Node): String = textRenderer.render(node).trim()
 }
