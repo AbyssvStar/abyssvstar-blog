@@ -46,6 +46,7 @@ node_modules/
 dist/
 .next/
 out/
+*.tsbuildinfo
 .pnpm-store/
 
 # --- 环境变量与密钥（绝不提交）---

@@ -67,6 +67,15 @@ export function SiteHeader({ title }: { title: string }) {
               {item.label}
             </Link>
           ))}
+          <Link
+            href="/search/"
+            className="header-icon"
+            data-active={pathname === '/search' || pathname.startsWith('/search/')}
+            aria-label="搜索"
+            title="搜索"
+          >
+            <SearchIcon />
+          </Link>
           <ThemeToggle />
         </nav>
       </div>
@@ -148,6 +157,15 @@ function MenuIcon({ open }: { open: boolean }) {
         strokeWidth="1.6"
         strokeLinecap="round"
       />
+    </svg>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="10.7" cy="10.7" r="6.7" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m15.7 15.7 4.1 4.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   )
 }
