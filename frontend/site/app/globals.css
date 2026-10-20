@@ -2044,34 +2044,212 @@ button.chip:disabled {
 
 /* ---------- 彩蛋：一炮星光 ---------- */
 .egg-burst {
-  animation: egg-burst 1.9s ease-out both;
-  background-image:
-    radial-gradient(2px 2px at 12% 24%, #fff, transparent 60%),
-    radial-gradient(2px 2px at 26% 71%, var(--aqua), transparent 60%),
-    radial-gradient(2px 2px at 38% 16%, #fff, transparent 60%),
-    radial-gradient(3px 3px at 52% 62%, var(--sky), transparent 60%),
-    radial-gradient(2px 2px at 64% 22%, #fff, transparent 60%),
-    radial-gradient(2px 2px at 71% 78%, var(--aqua), transparent 60%),
-    radial-gradient(2px 2px at 84% 34%, #fff, transparent 60%),
-    radial-gradient(2px 2px at 92% 66%, var(--sky), transparent 60%),
-    radial-gradient(44rem 28rem at 50% 48%, var(--accent-glow), transparent 70%);
+  --burst-angle: 0deg;
+  --burst-x: 50%;
+  --burst-y: 46%;
+  animation: egg-burst-shell 1.9s ease-out both;
   inset: 0;
+  mix-blend-mode: screen;
+  overflow: hidden;
   pointer-events: none;
   position: fixed;
   z-index: 40;
 }
 
-@keyframes egg-burst {
+.egg-burst::before {
+  animation: egg-burst-stars 1.9s ease-out both;
+  background-image:
+    radial-gradient(1.5px 1.5px at 10% 22%, var(--text), transparent 70%),
+    radial-gradient(2px 2px at 18% 68%, var(--aqua), transparent 70%),
+    radial-gradient(2.5px 2.5px at 30% 34%, var(--text), transparent 70%),
+    radial-gradient(2px 2px at 39% 79%, var(--sky), transparent 70%),
+    radial-gradient(3px 3px at 47% 18%, var(--text), transparent 70%),
+    radial-gradient(1.5px 1.5px at 58% 65%, var(--aqua), transparent 70%),
+    radial-gradient(2px 2px at 66% 27%, var(--text), transparent 70%),
+    radial-gradient(2.5px 2.5px at 76% 74%, var(--sky), transparent 70%),
+    radial-gradient(1.5px 1.5px at 87% 39%, var(--text), transparent 70%),
+    radial-gradient(2px 2px at 94% 63%, var(--aqua), transparent 70%),
+    radial-gradient(2px 2px at 22% 12%, var(--accent), transparent 70%),
+    radial-gradient(2px 2px at 82% 14%, var(--accent), transparent 70%);
+  content: '';
+  inset: -12%;
+  opacity: 0;
+}
+
+.egg-burst::after {
+  animation: egg-burst-cross 1.9s ease-out both;
+  background:
+    linear-gradient(90deg, transparent 0 45%, color-mix(in srgb, var(--text) 74%, transparent) 50%, transparent 55% 100%) center / 100% 1px no-repeat,
+    linear-gradient(0deg, transparent 0 45%, color-mix(in srgb, var(--text) 74%, transparent) 50%, transparent 55% 100%) center / 1px 100% no-repeat;
+  content: '';
+  height: min(52rem, 118vw);
+  left: var(--burst-x);
+  opacity: 0;
+  position: absolute;
+  top: var(--burst-y);
+  transform: translate(-50%, -50%) rotate(var(--burst-angle)) scaleX(0.1);
+  width: min(52rem, 118vw);
+}
+
+.egg-burst__halo,
+.egg-burst__rays,
+.egg-burst__ring {
+  left: var(--burst-x);
+  position: absolute;
+  top: var(--burst-y);
+  transform: translate(-50%, -50%) scale(0.15);
+}
+
+.egg-burst__halo {
+  animation: egg-burst-halo 1.9s ease-out both;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--text) 96%, transparent) 0 2%,
+    color-mix(in srgb, var(--accent) 62%, transparent) 11%,
+    var(--accent-glow) 28%,
+    transparent 68%
+  );
+  border-radius: 50%;
+  filter: blur(1px);
+  height: min(22rem, 62vw);
+  opacity: 0;
+  width: min(22rem, 62vw);
+}
+
+.egg-burst__rays {
+  animation: egg-burst-rays 1.9s cubic-bezier(0.16, 0.72, 0.18, 1) both;
+  aspect-ratio: 1;
+  background: repeating-conic-gradient(
+    from 0deg,
+    transparent 0deg 10.5deg,
+    color-mix(in srgb, var(--accent) 52%, transparent) 11deg 11.8deg,
+    transparent 12.6deg 24deg
+  );
+  border-radius: 50%;
+  mask-image: radial-gradient(circle, transparent 0 7%, #000 17%, rgb(0 0 0 / 72%) 43%, transparent 72%);
+  opacity: 0;
+  width: min(46rem, 108vw);
+}
+
+.egg-burst__ring {
+  animation: egg-burst-ring 1.9s ease-out both;
+  border: 1px solid color-mix(in srgb, var(--accent) 78%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 1.5rem color-mix(in srgb, var(--accent) 42%, transparent),
+    inset 0 0 1rem color-mix(in srgb, var(--sky) 34%, transparent);
+  height: 5rem;
+  opacity: 0;
+  width: 5rem;
+}
+
+.egg-burst__ring--far {
+  animation-name: egg-burst-ring-far;
+  border-color: color-mix(in srgb, var(--sky) 64%, transparent);
+  height: 7rem;
+  width: 7rem;
+}
+
+:root[data-theme='light'] .egg-burst {
+  mix-blend-mode: multiply;
+}
+
+@keyframes egg-burst-shell {
   0% {
     opacity: 0;
-    transform: scale(0.6);
   }
-  22% {
+  10% {
+    opacity: 1;
+  }
+  58% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes egg-burst-stars {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  18% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.14);
+  }
+}
+
+@keyframes egg-burst-cross {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--burst-angle)) scaleX(0.08);
+  }
+  12% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: scale(1.4);
+    transform: translate(-50%, -50%) rotate(calc(var(--burst-angle) + 9deg)) scaleX(1.35);
+  }
+}
+
+@keyframes egg-burst-halo {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.15);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.5);
+  }
+}
+
+@keyframes egg-burst-rays {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--burst-angle)) scale(0.18);
+  }
+  18% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(calc(var(--burst-angle) + 54deg)) scale(1.35);
+  }
+}
+
+@keyframes egg-burst-ring {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.18);
+  }
+  16% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(5.4);
+  }
+}
+
+@keyframes egg-burst-ring-far {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.1);
+  }
+  22% {
+    opacity: 0.58;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(7.2);
   }
 }
 

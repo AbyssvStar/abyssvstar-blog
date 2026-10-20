@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
 /** 终端里的 `star` 命令也放这一炮，所以事件名拿出来共用 */
 export const BURST_EVENT = 'abyssvstar:burst'
@@ -22,6 +22,13 @@ const SEQUENCE = [
   'a',
 ]
 
+interface BurstLayer {
+  id: number
+  x: number
+  y: number
+  angle: number
+}
+
 /**
  * 小彩蛋：↑↑↓↓←→←→BA。
  *
@@ -29,7 +36,7 @@ const SEQUENCE = [
  * 「自己找到」，不是每次来访都被它打断。
  */
 export function KonamiEgg() {
-  const [bursts, setBursts] = useState<number[]>([])
+  const [bursts, setBursts] = useState<BurstLayer[]>([])
   const [toast, setToast] = useState(false)
   const burstId = useRef(0)
   const burstTimers = useRef(new Set<number>())
@@ -40,10 +47,16 @@ export function KonamiEgg() {
 
     function boom() {
       const id = ++burstId.current
-      setBursts((current) => [...current.slice(-(MAX_BURST_LAYERS - 1)), id])
+      const layer: BurstLayer = {
+        id,
+        x: 28 + Math.random() * 44,
+        y: 24 + Math.random() * 42,
+        angle: Math.random() * 360,
+      }
+      setBursts((current) => [...current.slice(-(MAX_BURST_LAYERS - 1)), layer])
       const timer = window.setTimeout(() => {
         burstTimers.current.delete(timer)
-        setBursts((current) => current.filter((item) => item !== id))
+        setBursts((current) => current.filter((item) => item.id !== id))
       }, BURST_DURATION_MS)
       burstTimers.current.add(timer)
     }
@@ -82,8 +95,24 @@ export function KonamiEgg() {
 
   return (
     <>
-      {bursts.map((id) => (
-        <div key={id} className="egg-burst" aria-hidden="true" />
+      {bursts.map((burst) => (
+        <div
+          key={burst.id}
+          className="egg-burst"
+          aria-hidden="true"
+          style={
+            {
+              '--burst-x': `${burst.x}%`,
+              '--burst-y': `${burst.y}%`,
+              '--burst-angle': `${burst.angle}deg`,
+            } as CSSProperties
+          }
+        >
+          <span className="egg-burst__halo" />
+          <span className="egg-burst__rays" />
+          <span className="egg-burst__ring egg-burst__ring--near" />
+          <span className="egg-burst__ring egg-burst__ring--far" />
+        </div>
       ))}
       {toast && (
         <div className="egg-toast" role="status">
