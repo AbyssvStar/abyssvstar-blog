@@ -125,35 +125,38 @@ V11 之前的快照没有这份原文，切分时退化为从 `html` 提取文�
 ### 5.1 主路径
 
 ```
-发布事务提交后（异步，失败不影响发布）：
-  1. 按 post_publications 的内容切 chunk
-  2. Bulk 写入：
-       - blog_article：UPSERT 文章级文档
-       - blog_chunk：先 DELETE 该 postId 的所有旧 chunk，再 Bulk 插入新 chunk
-  3. 成功 → posts.es_sync_status = 'SYNCED', es_synced_at = now()
-     失败 → posts.es_sync_status = 'FAILED'
+发布事务内：
+  posts.es_sync_status = 'PENDING'，es_next_retry_at = now()
+
+事务提交后（异步，失败不影响发布）：
+  1. 按 post_publications.content_md 切 chunk（老快照退化为 HTML 文本）
+  2. 写入 blog_article
+  3. 按 postId 删除旧 chunk，再 Bulk 插入新 chunk
+  4. 成功 → SYNCED，失败 → FAILED + attempts + 指数退避
 ```
 
 **为什么 chunk 要先删后插**：文章改短了以后，旧的多余 chunk 会残留在索引里，搜到就是幽灵内容。**先按 `postId` 删干净再插**，简单且不会错。用 `delete_by_query` + `bulk`，不要逐条删。
 
-**`contentHash` 的作用**：索引前比对 `blog_article` 里已有的 `contentHash`，**相同就直接跳过**（自动保存可能触发多次同步请求，这是省钱省 IO 的第一道闸）。
+**为什么不再靠 `contentHash` 跳过**：自动保存本身不会触发同步，PENDING 状态已经是第一道闸。`contentHash` 继续保留在文档里，供后续重建和诊断比对。
 
 ### 5.2 补偿任务
 
 ```
-@Scheduled(fixedDelay = 60s)
+@Scheduled(fixedDelay = 10s)
   SELECT * FROM posts
-   WHERE es_sync_status = 'FAILED' AND deleted_at IS NULL
-   ORDER BY updated_at DESC LIMIT 20
-  → 重新走同步流程；连续失败 5 次 → 记 ERROR 日志并告警
+   WHERE es_sync_status IN ('PENDING', 'FAILED')
+     AND (es_next_retry_at IS NULL OR es_next_retry_at <= now())
+   ORDER BY es_next_retry_at, id LIMIT 20
+  → 重新走同步流程；失败按 1m / 2m / 4m ... 最多 15m 退避
+  → 连续失败 5 次起记 ERROR 日志，但不停止后续重试
 ```
 
 | 边界场景 | 处理 |
 |---------|------|
 | ES 长时间不可用 | 补偿任务持续重试；搜索结果自动降级到 PG，**站不会挂** |
 | 文章被删除 / 转私密 | `es_sync_status = 'SKIPPED'`，并从两个索引中删除文档 |
-| 需要全量重建 | 后台「重建索引」按钮 → 清空索引 → 遍历所有发布快照重新写入（分批 + 限速，别打满内存） |
-| 补偿任务与发布同时发生 | 以 `contentHash` 为幂等键，重复写入结果一致 |
+| 需要全量重建 | `POST /admin/api/search/reindex`：重建 article/chunk 索引，所有公开快照重新排队；重建期间搜索走 PG |
+| 补偿任务与发布同时发生 | 单线程串行写入，文章级与 chunk 文档使用稳定 id，重复写入结果一致 |
 
 > **绝不把 ES 写入放进发布事务。** 发布是作者的动作，索引是衍生物。ES 挂了必须仍然能发文——这是定下的降级原则。
 

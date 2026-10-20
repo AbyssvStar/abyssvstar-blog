@@ -42,6 +42,16 @@ abyssvstar.cloud
 
 > `-XX:+UseSerialGC` 是刻意的：512MB 堆 + 2 核，Serial GC 的 GC 开销比 G1 更低，也没有并行线程抢占 CPU。
 
+### 2.1.1 Elasticsearch
+
+- 镜像：`infra/elasticsearch/Dockerfile`，基于 Elasticsearch 8.15.3 安装同版本 IK 插件
+- Profile：`docker compose --profile es up -d elasticsearch`
+- App 地址：容器内 `BLOG_SEARCH_URL=http://elasticsearch:9200`
+- 堆：固定 `-Xms512m -Xmx512m`，单节点、0 副本
+- ES 不可达不阻止 app 启动，搜索降级到 PostgreSQL
+- ES 可达但 mapping schema / 模型 / 向量维度不匹配时，应用启动失败并明确报错
+- 宿主 Linux 仍需满足 `vm.max_map_count >= 262144`
+
 
 ### 2.2 三条流水线
 
