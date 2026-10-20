@@ -61,10 +61,19 @@ data class Post(
     var viewCount: Long = 0,
 
     @TableField("es_sync_status")
-    var esSyncStatus: EsSyncStatus = EsSyncStatus.PENDING,
+    var esSyncStatus: EsSyncStatus = EsSyncStatus.SKIPPED,
 
     @TableField("es_synced_at")
     var esSyncedAt: Instant? = null,
+
+    @TableField("es_sync_attempts")
+    var esSyncAttempts: Int = 0,
+
+    @TableField(value = "es_next_retry_at", updateStrategy = FieldStrategy.IGNORED)
+    var esNextRetryAt: Instant? = null,
+
+    @TableField(value = "es_last_error", updateStrategy = FieldStrategy.IGNORED)
+    var esLastError: String? = null,
 
     /**
      * 乐观锁版本号。
