@@ -285,6 +285,7 @@ CREATE UNIQUE INDEX assets_sha_uq ON assets (sha256) WHERE deleted_at IS NULL;
 | `V11__publication_content_md.sql` | `post_publications.content_md`（发布时冻结 Markdown） |
 | `V12__publication_trgm.sql` | 降级搜索 trigram 索引改到 `post_publications`，删掉 `posts` 上那两个 |
 | `V13__search_sync_state.sql` | 搜索同步重试状态、草稿默认 `SKIPPED`、补偿扫描索引 |
+| `V14__note_search_sync_state.sql` | 短动态搜索同步重试状态与补偿索引 |
 
 > 后续迁移**只增不改**：已应用的迁移文件永不修改，结构变更一律新开 `V{n+1}`。
 
