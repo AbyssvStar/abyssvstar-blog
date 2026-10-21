@@ -1,9 +1,12 @@
 package com.abyssvstar.blog.export.service
 
 import com.abyssvstar.blog.export.web.dto.ExportPayload
+import com.abyssvstar.blog.export.web.dto.ExportNote
+import com.abyssvstar.blog.export.web.dto.ExportNoteImage
 import com.abyssvstar.blog.export.web.dto.ExportPost
 import com.abyssvstar.blog.export.web.dto.ExportSiteConfig
 import com.abyssvstar.blog.export.web.dto.ExportTag
+import com.abyssvstar.blog.note.service.NoteService
 import com.abyssvstar.blog.post.domain.PostPublication
 import com.abyssvstar.blog.post.repository.PostPublicationRepository
 import com.abyssvstar.blog.post.repository.PostRepository
@@ -26,6 +29,7 @@ import org.springframework.stereotype.Service
 class ExportService(
     private val posts: PostRepository,
     private val publications: PostPublicationRepository,
+    private val notes: NoteService,
     private val siteConfig: SiteConfigService,
     private val objectMapper: ObjectMapper,
 ) {
@@ -38,6 +42,7 @@ class ExportService(
             val id = post.id ?: return@mapNotNull null
             val pub = pubMap[id] ?: return@mapNotNull null
             ExportPost(
+                id = id,
                 slug = pub.slug,
                 title = pub.title,
                 summary = pub.summary,
@@ -53,7 +58,22 @@ class ExportService(
         val config = siteConfig.exportView()
         val payload = ExportPayload(
             posts = exportPosts,
-            notes = emptyList(),
+            notes = notes.exportPublic().map { note ->
+                ExportNote(
+                    id = note.id,
+                    content = note.content,
+                    publishedAt = note.publishedAt,
+                    images = note.images.map { image ->
+                        ExportNoteImage(
+                            id = image.id,
+                            url = image.url,
+                            width = image.width,
+                            height = image.height,
+                            variants = image.variants,
+                        )
+                    },
+                )
+            },
             tags = collectTags(ordered.mapNotNull { it.id }.mapNotNull { pubMap[it] }),
             siteConfig = ExportSiteConfig(
                 title = config.title,

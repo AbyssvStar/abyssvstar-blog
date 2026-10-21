@@ -86,6 +86,9 @@ class AssetService(
         return asset.toResponse()
     }
 
+    fun findActiveByIds(ids: Collection<Long>): Map<Long, AssetResponse> =
+        assets.findActiveByIds(ids).mapNotNull { asset -> asset.id?.let { it to asset.toResponse() } }.toMap()
+
     fun list(page: Int, size: Int): PageData<AssetResponse> {
         val result = assets.pageActive(page, size)
         return PageData.of(result.records.map { it.toResponse() }, page, size, result.total)

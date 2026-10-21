@@ -4,7 +4,7 @@ import com.abyssvstar.blog.search.SearchPage
 import java.time.Instant
 
 data class SearchItemResponse(
-    val type: String = "POST",
+    val type: String,
     val id: Long,
     val slug: String,
     val title: String,
@@ -27,6 +27,7 @@ fun SearchPage.toResponse(page: Int, size: Int) = SearchPageResponse(
     degraded = degraded,
     items = items.map {
         SearchItemResponse(
+            type = it.type,
             id = it.id,
             slug = it.slug,
             title = it.title,

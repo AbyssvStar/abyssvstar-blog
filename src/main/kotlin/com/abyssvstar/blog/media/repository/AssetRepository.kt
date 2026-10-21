@@ -22,6 +22,11 @@ class AssetRepository(private val mapper: AssetMapper) {
     fun findActiveById(id: Long): Asset? =
         mapper.selectOne(QueryWrapper<Asset>().isNull("deleted_at").eq("id", id))
 
+    fun findActiveByIds(ids: Collection<Long>): List<Asset> {
+        if (ids.isEmpty()) return emptyList()
+        return mapper.selectList(QueryWrapper<Asset>().isNull("deleted_at").`in`("id", ids))
+    }
+
     fun pageActive(page: Int, size: Int): Page<Asset> =
         mapper.selectPage(
             Page(page.toLong(), size.toLong()),

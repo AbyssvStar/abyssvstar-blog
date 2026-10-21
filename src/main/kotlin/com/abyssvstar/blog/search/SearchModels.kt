@@ -10,6 +10,7 @@ data class SearchPage(
 )
 
 data class SearchItem(
+    val type: String,
     val id: Long,
     val slug: String,
     val title: String,
@@ -21,6 +22,7 @@ data class SearchItem(
 
 /** ES 命中只提供 id、排序和摘要片段，正文事实仍从 PostgreSQL 的发布快照补回。 */
 data class SearchHit(
+    val type: String,
     val id: Long,
     val highlights: Map<String, String>,
 )
