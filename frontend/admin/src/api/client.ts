@@ -53,6 +53,9 @@ async function unwrap<T>(res: Response): Promise<T> {
   try {
     json = JSON.parse(text) as ApiResponse<T>
   } catch {
+    if (res.status === 413) {
+      throw new ApiError(40002, '文件超过服务器上传上限（单文件 5MB）', res.status)
+    }
     throw new ApiError(-1, `响应不是合法 JSON（HTTP ${res.status}）`, res.status)
   }
 
@@ -91,6 +94,9 @@ export const api = {
  * 而 multipart 的 boundary 必须由浏览器自己生成。
  */
 export async function upload<T>(path: string, file: File): Promise<T> {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new ApiError(40002, '文件超过大小上限（单文件 5MB）', 413)
+  }
   const form = new FormData()
   form.append('file', file, file.name)
   const headers: Record<string, string> = {}
@@ -98,6 +104,8 @@ export async function upload<T>(path: string, file: File): Promise<T> {
   const res = await fetch(`/admin/api${path}`, { method: 'POST', headers, credentials: 'same-origin', body: form })
   return unwrap<T>(res)
 }
+
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 /** 错误码常量，和后端 shared/web/ErrorCode.kt 对齐 */
 export const Code = {

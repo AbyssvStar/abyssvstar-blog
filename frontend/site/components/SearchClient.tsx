@@ -194,7 +194,7 @@ export function SearchClient({ hotTags }: { hotTags: string[] }) {
               </button>
             ))}
           </div>
-          <p className="search-start__note faint">站名（含常见错拼）会直接跳到关于页。</p>
+          <p className="search-start__note faint"></p>
         </div>
       )}
 
