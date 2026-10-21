@@ -9,4 +9,7 @@ data class AssetResponse(
     val width: Int?,
     val height: Int?,
     val originalName: String?,
+    /** key 是宽度档位，如 w400 / w800；value 是可直接使用的公开 URL。 */
+    val variants: Map<String, String> = emptyMap(),
+    val createdAt: java.time.Instant? = null,
 )

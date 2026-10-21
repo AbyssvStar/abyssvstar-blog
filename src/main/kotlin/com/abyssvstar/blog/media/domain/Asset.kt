@@ -1,5 +1,6 @@
 package com.abyssvstar.blog.media.domain
 
+import com.abyssvstar.blog.shared.persistence.JsonbTypeHandler
 import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableField
@@ -13,7 +14,7 @@ import java.time.Instant
  * 文件本体在 MinIO，这里只有元数据；完整 URL = `{blog.storage.public-base-url}/{path}`。
  * `variants`（jsonb，留给将来的多尺寸缩略图）刻意没有映射：没人写它的时候映射出来只是多一处要维护。
  */
-@TableName("assets")
+@TableName(value = "assets", autoResultMap = true)
 data class Asset(
     // 主键列名写在 @TableId 上：MyBatis-Plus 会忽略主键字段上的 @TableField，启动时还会打一条 WARN
     @TableId(value = "id", type = IdType.AUTO)
@@ -41,6 +42,10 @@ data class Asset(
     /** 内容哈希。同一个文件重复上传只会有一行（见 `assets_sha_uq`） */
     @TableField("sha256")
     var sha256: String = "",
+
+    /** 缩略图存储的是对象名，不是完整 URL；换域名时整站链接才不会被旧快照锁死。 */
+    @TableField(value = "variants", typeHandler = JsonbTypeHandler::class)
+    var variants: String = "{}",
 
     @TableField("deleted_at")
     var deletedAt: Instant? = null,
