@@ -90,7 +90,7 @@ export default async function HomePage() {
                   // 用得越多字号越大
                   <Link
                     key={tag.slug}
-                    href={`/posts/?tag=${encodeURIComponent(tag.name)}`}
+                    href={`/tags/${tag.slug}/`}
                     className="chip"
                     style={{ fontSize: `${(0.78 + Math.min(tag.count, 10) * 0.17).toFixed(2)}rem` }}
                   >

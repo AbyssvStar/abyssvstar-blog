@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { formatDate } from '@/lib/format'
 
 interface SearchItem {
-  type: 'POST'
+  type: 'POST' | 'NOTE'
   id: number
   slug: string
   title: string
@@ -225,17 +225,19 @@ export function SearchClient({ hotTags }: { hotTags: string[] }) {
             // 有正文命中片段就只显示它：摘要和片段并排时读者不知道该先读哪个，而且片段更重、层级是反的
             const bodyHtml =
               item.bodySnippet && item.bodySnippet !== item.summaryHtml ? item.bodySnippet : item.summaryHtml
+            const href = item.type === 'NOTE' ? `/notes/${item.id}/` : `/posts/${item.slug}/`
             return (
               <Link
-                key={item.id}
-                href={`/posts/${item.slug}/`}
+                key={`${item.type}-${item.id}`}
+                href={href}
                 className="search-result"
-                aria-label={`阅读文章：${item.title}`}
+                aria-label={`${item.type === 'NOTE' ? '查看动态' : '阅读文章'}：${item.title}`}
               >
                 <div className="search-result__head">
                   <h2 className="search-result__title">{item.title}</h2>
                   {/* 标签和日期并到标题这一行的右端：右半边有东西压着，行才不会显得空 */}
                   <div className="search-result__meta">
+                    <span className="chip">{item.type === 'NOTE' ? '动态' : '文章'}</span>
                     {item.tags.map((tag) => (
                       <span key={tag} className="chip">
                         {tag}
