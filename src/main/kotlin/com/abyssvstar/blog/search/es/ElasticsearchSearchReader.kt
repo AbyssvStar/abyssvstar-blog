@@ -93,7 +93,6 @@ class ElasticsearchSearchReader(
                         ),
                     ),
                     "filter" to listOf(
-                        mapOf("term" to mapOf("docType" to "POST")),
                         mapOf("range" to mapOf("publishedAt" to mapOf("lte" to "now"))),
                     ),
                 ),
