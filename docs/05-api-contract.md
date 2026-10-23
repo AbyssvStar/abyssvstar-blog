@@ -196,8 +196,8 @@ Header: X-Export-Token: <token>
 | GET | `/archive` | 🚧 | 独立归档统计接口，当前公开站直接基于 `/export` 在构建期生成归档页 |
 | GET | `/search?q=` | ✅ | 搜索（ES 主，PG 降级；降级返回 HTTP 200 + code 60001） |
 | POST | `/views` | ✅ | 阅读量打点（**幂等、永不报错、返回 204**） |
-| GET | `/comments?postId=` | ✅ | 已审核留言 |
-| POST | `/comments` | ✅ | 提交留言（默认 `PENDING`；蜜罐 / 耗时 / 限流） |
+| GET | `/comments?postId=` 或 `?noteId=` | ✅ | 已审核留言；`postId` / `noteId` 二选一 |
+| POST | `/comments` | ✅ | 提交文章/动态留言（默认 `PENDING`；蜜罐 / 耗时 / 限流） |
 | GET | `/export` | ✅ | 全量导出（Token 鉴权；带 ETag，内容没变回 304） |
 
 > **RSS / sitemap 不在后端** —— 由 Next.js 在构建时生成，零运行时开销。
