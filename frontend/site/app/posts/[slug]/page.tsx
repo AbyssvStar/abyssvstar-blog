@@ -134,7 +134,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             {site.license}
           </footer>
 
-          <CommentSection postId={post.id} />
+          <CommentSection postId={post.id} variant="card" />
         </div>
       </article>
     </>
