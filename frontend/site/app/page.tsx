@@ -19,7 +19,8 @@ export default async function HomePage() {
     getSiteConfig(),
   ])
   const latest = posts.slice(0, 6)
-  const notes = content.notes.slice(0, 5)
+  const notes = content.notes.slice(0, 3)
+  const hasMoreNotes = content.notes.length > notes.length
 
 
   return (
@@ -50,7 +51,7 @@ export default async function HomePage() {
       </section>
 
 
-      <section className="wrap section">
+      <section id="latest" className="wrap section">
         <div className="home-cols">
           <div>
             <div className="section__head">
@@ -67,7 +68,6 @@ export default async function HomePage() {
             <div className="info-cell home-notes-cell">
               <div className="info-cell__head">
                 <div className="info-cell__label">最近动态</div>
-                <Link href="/notes/" className="mono faint info-cell__more">全部动态 →</Link>
               </div>
               {notes.length > 0 ? (
                 <div className="home-note-list">
@@ -80,6 +80,12 @@ export default async function HomePage() {
                       )}
                     </Link>
                   ))}
+                  {hasMoreNotes && (
+                    <Link href="/notes/" className="home-note-more">
+                      更多动态
+                      <span aria-hidden="true">→</span>
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <p className="faint" style={{ fontSize: '0.85rem', margin: 0 }}>还没有短动态。</p>

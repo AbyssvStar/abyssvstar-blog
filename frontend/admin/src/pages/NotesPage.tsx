@@ -16,6 +16,7 @@ export function NotesPage() {
   const [editing, setEditing] = useState<NoteInfo | null>(null)
   const [editContent, setEditContent] = useState('')
   const [editVisibility, setEditVisibility] = useState<Visibility>('PUBLIC')
+  const [editImages, setEditImages] = useState<AssetInfo[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,6 +36,7 @@ export function NotesPage() {
   async function upload(files: FileList | null) {
     if (!files) return
     setBusy(true)
+    setError(null)
     try {
       const slots = Math.max(0, 4 - images.length)
       for (const file of Array.from(files).slice(0, slots)) {
@@ -64,20 +66,40 @@ export function NotesPage() {
     }
   }
 
+  async function uploadEdit(files: FileList | null) {
+    if (!files) return
+    setBusy(true)
+    setError(null)
+    try {
+      const slots = Math.max(0, 4 - editImages.length)
+      for (const file of Array.from(files).slice(0, slots)) {
+        const uploaded = await postsApi.uploadAsset(file)
+        setEditImages((current) => [...current, uploaded])
+      }
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : '图片上传失败')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function startEdit(note: NoteInfo) {
+    setError(null)
     setEditing(note)
     setEditContent(note.content)
     setEditVisibility(note.visibility)
+    setEditImages(note.images)
   }
 
   async function saveEdit() {
     if (!editing) return
     setBusy(true)
+    setError(null)
     try {
       await notesApi.update(editing.id, {
         content: editContent,
         visibility: editVisibility,
-        assetIds: editing.images.map((image) => image.id),
+        assetIds: editImages.map((image) => image.id),
       })
       setEditing(null)
       await load()
@@ -122,13 +144,13 @@ export function NotesPage() {
           {images.map((image) => (
             <div key={image.id} className="quick-note__image">
               <img src={image.variants?.w400 ?? image.url} alt="" />
-              <button onClick={() => setImages((current) => current.filter((item) => item.id !== image.id))}>×</button>
+              <button type="button" aria-label="移除图片" onClick={() => setImages((current) => current.filter((item) => item.id !== image.id))}>×</button>
             </div>
           ))}
           {images.length < 4 && (
             <label className="quick-note__add">
               +
-              <input type="file" accept="image/*" multiple hidden onChange={(event) => void upload(event.target.files)} />
+              <input type="file" accept="image/*" multiple hidden onChange={(event) => { const files = event.currentTarget.files; event.currentTarget.value = ''; void upload(files) }} />
             </label>
           )}
         </div>
@@ -156,7 +178,27 @@ export function NotesPage() {
             </div>
             {editing?.id === note.id ? (
               <div>
-                <textarea className="field" value={editContent} maxLength={500} onChange={(event) => setEditContent(event.target.value)} />
+                <textarea
+                  className="field"
+                  value={editContent}
+                  maxLength={500}
+                  onChange={(event) => setEditContent(event.target.value)}
+                  aria-label="动态内容"
+                />
+                <div className="quick-note__images">
+                  {editImages.map((image) => (
+                    <div key={image.id} className="quick-note__image">
+                      <img src={image.variants?.w400 ?? image.url} alt="" />
+                      <button type="button" aria-label="移除图片" onClick={() => setEditImages((current) => current.filter((item) => item.id !== image.id))}>×</button>
+                    </div>
+                  ))}
+                  {editImages.length < 4 && (
+                    <label className="quick-note__add">
+                      +
+                      <input type="file" accept="image/*" multiple hidden onChange={(event) => { const files = event.currentTarget.files; event.currentTarget.value = ''; void uploadEdit(files) }} />
+                    </label>
+                  )}
+                </div>
                 <div className="flex gap-2 mt-2">
                   <select className="field" value={editVisibility} onChange={(event) => setEditVisibility(event.target.value as Visibility)}>
                     <option value="PUBLIC">公开</option>

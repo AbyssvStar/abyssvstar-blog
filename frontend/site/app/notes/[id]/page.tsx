@@ -36,9 +36,17 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
         </div>
         <p className="note-detail__content">{note.content}</p>
         {note.images.length > 0 && (
-          <div className={`note-card__images note-card__images--${Math.min(note.images.length, 4)}`}>
+          <div className={`note-card__images note-card__images--detail note-card__images--${Math.min(note.images.length, 4)}`}>
             {note.images.map((image) => (
-              <img key={image.id} src={image.variants?.w800 ?? image.url} alt="" loading="lazy" />
+              <img
+                key={image.id}
+                src={image.variants?.w800 ?? image.url}
+                alt=""
+                width={image.width}
+                height={image.height}
+                loading="lazy"
+                decoding="async"
+              />
             ))}
           </div>
         )}
