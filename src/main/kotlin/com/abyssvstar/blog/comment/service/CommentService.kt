@@ -7,6 +7,7 @@ import com.abyssvstar.blog.comment.web.dto.AdminCommentResponse
 import com.abyssvstar.blog.comment.web.dto.CommentStatsResponse
 import com.abyssvstar.blog.comment.web.dto.CommentSubmitRequest
 import com.abyssvstar.blog.comment.web.dto.PublicCommentResponse
+import com.abyssvstar.blog.note.repository.NoteRepository
 import com.abyssvstar.blog.post.repository.PostRepository
 import com.abyssvstar.blog.shared.ratelimit.RateLimitProperties
 import com.abyssvstar.blog.shared.util.ClientIp
@@ -22,24 +23,30 @@ import org.springframework.transaction.annotation.Transactional
 class CommentService(
     private val comments: CommentRepository,
     private val posts: PostRepository,
+    private val notes: NoteRepository,
     private val rateProps: RateLimitProperties,
 ) {
 
-    fun listApproved(postId: Long?, page: Int, size: Int): PageData<PublicCommentResponse> {
+    fun listApproved(postId: Long?, noteId: Long?, page: Int, size: Int): PageData<PublicCommentResponse> {
+        requireSingleTarget(postId, noteId)
         if (postId != null) posts.findPublicById(postId) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
-        val result = comments.pageApproved(postId, page, size)
+        if (noteId != null) notes.findPublicById(noteId) ?: throw BusinessException(ErrorCode.NOTE_NOT_FOUND)
+        val result = comments.pageApproved(postId, noteId, page, size)
         return PageData.of(result.records.map { it.toPublic() }, page, size, result.total)
     }
 
     @Transactional
     fun submit(req: CommentSubmitRequest, request: HttpServletRequest): Unit {
+        requireSingleTarget(req.postId, req.noteId)
         if (req.postId != null) posts.findPublicById(req.postId) ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
+        if (req.noteId != null) notes.findPublicById(req.noteId) ?: throw BusinessException(ErrorCode.NOTE_NOT_FOUND)
         val elapsed = System.currentTimeMillis() - req.formStartedAt
         val spam = !req.website.isNullOrBlank() || elapsed < MIN_FORM_MILLIS
         val userAgent = request.getHeader("User-Agent")
         comments.insert(
             Comment(
                 postId = req.postId,
+                noteId = req.noteId,
                 authorName = req.authorName.trim(),
                 authorEmail = req.authorEmail?.trim()?.ifBlank { null },
                 content = req.content.trim(),
@@ -81,6 +88,7 @@ class CommentService(
     private fun Comment.toPublic() = PublicCommentResponse(
         id = requireNotNull(id),
         postId = postId,
+        noteId = noteId,
         authorName = authorName,
         content = content,
         createdAt = createdAt,
@@ -89,6 +97,7 @@ class CommentService(
     private fun Comment.toAdmin() = AdminCommentResponse(
         id = requireNotNull(id),
         postId = postId,
+        noteId = noteId,
         authorName = authorName,
         authorEmail = authorEmail,
         content = content,
@@ -96,6 +105,12 @@ class CommentService(
         createdAt = createdAt,
         reviewedAt = reviewedAt,
     )
+
+    private fun requireSingleTarget(postId: Long?, noteId: Long?) {
+        if (postId != null && noteId != null) {
+            throw BusinessException(ErrorCode.VALIDATION_FAILED, "留言不能同时挂在文章和动态上")
+        }
+    }
 
     private companion object {
         const val MIN_FORM_MILLIS = 3_000L

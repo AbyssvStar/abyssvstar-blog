@@ -23,10 +23,11 @@ class PublicCommentController(private val comments: CommentService) {
     @GetMapping
     fun list(
         @RequestParam(required = false) postId: Long?,
+        @RequestParam(required = false) noteId: Long?,
         @RequestParam(defaultValue = "1") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
     ): ApiResponse<PageData<PublicCommentResponse>> =
-        ApiResponse.ok(comments.listApproved(postId, page.coerceAtLeast(1), size.coerceIn(1, MAX_PAGE_SIZE)))
+        ApiResponse.ok(comments.listApproved(postId, noteId, page.coerceAtLeast(1), size.coerceIn(1, MAX_PAGE_SIZE)))
 
     @RateLimit(limit = 5, window = "1h", exceededCode = ErrorCode.COMMENT_RATE_LIMITED)
     @PostMapping

@@ -15,6 +15,9 @@ data class Comment(
     @TableField("post_id")
     var postId: Long? = null,
 
+    @TableField("note_id")
+    var noteId: Long? = null,
+
     @TableField("author_name")
     var authorName: String = "",
 

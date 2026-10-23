@@ -15,11 +15,18 @@ class CommentRepository(private val mapper: CommentMapper) {
         mapper.insert(comment)
     }
 
-    fun pageApproved(postId: Long?, page: Int, size: Int): Page<Comment> {
+    fun pageApproved(postId: Long?, noteId: Long?, page: Int, size: Int): Page<Comment> {
         val wrapper = QueryWrapper<Comment>()
             .eq("status", CommentStatus.APPROVED.name)
             .orderByDesc("created_at", "id")
-        if (postId == null) wrapper.isNull("post_id") else wrapper.eq("post_id", postId)
+        when {
+            postId != null -> wrapper.eq("post_id", postId)
+            noteId != null -> wrapper.eq("note_id", noteId)
+            else -> {
+                wrapper.isNull("post_id")
+                wrapper.isNull("note_id")
+            }
+        }
         return mapper.selectPage(Page(page.toLong(), size.toLong()), wrapper)
     }
 

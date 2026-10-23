@@ -9,6 +9,7 @@ import java.time.Instant
 
 data class CommentSubmitRequest(
     val postId: Long? = null,
+    val noteId: Long? = null,
     @field:NotBlank(message = "昵称不能为空")
     @field:Size(max = 30, message = "昵称不能超过 30 字")
     val authorName: String,
@@ -27,6 +28,7 @@ data class CommentSubmitRequest(
 data class PublicCommentResponse(
     val id: Long,
     val postId: Long?,
+    val noteId: Long?,
     val authorName: String,
     val content: String,
     val createdAt: Instant?,
@@ -35,6 +37,7 @@ data class PublicCommentResponse(
 data class AdminCommentResponse(
     val id: Long,
     val postId: Long?,
+    val noteId: Long?,
     val authorName: String,
     val authorEmail: String?,
     val content: String,
