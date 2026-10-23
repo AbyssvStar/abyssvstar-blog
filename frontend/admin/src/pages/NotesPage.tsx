@@ -33,13 +33,13 @@ export function NotesPage() {
 
   useEffect(() => { void load(1) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function upload(files: FileList | null) {
-    if (!files) return
+  async function upload(files: File[]) {
+    if (files.length === 0) return
     setBusy(true)
     setError(null)
     try {
       const slots = Math.max(0, 4 - images.length)
-      for (const file of Array.from(files).slice(0, slots)) {
+      for (const file of files.slice(0, slots)) {
         const uploaded = await postsApi.uploadAsset(file)
         setImages((current) => [...current, uploaded])
       }
@@ -66,13 +66,13 @@ export function NotesPage() {
     }
   }
 
-  async function uploadEdit(files: FileList | null) {
-    if (!files) return
+  async function uploadEdit(files: File[]) {
+    if (files.length === 0) return
     setBusy(true)
     setError(null)
     try {
       const slots = Math.max(0, 4 - editImages.length)
-      for (const file of Array.from(files).slice(0, slots)) {
+      for (const file of files.slice(0, slots)) {
         const uploaded = await postsApi.uploadAsset(file)
         setEditImages((current) => [...current, uploaded])
       }
@@ -150,7 +150,18 @@ export function NotesPage() {
           {images.length < 4 && (
             <label className="quick-note__add">
               +
-              <input type="file" accept="image/*" multiple hidden onChange={(event) => { const files = event.currentTarget.files; event.currentTarget.value = ''; void upload(files) }} />
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(event) => {
+                  const input = event.currentTarget
+                  const files = Array.from(input.files ?? [])
+                  input.value = ''
+                  void upload(files)
+                }}
+              />
             </label>
           )}
         </div>
@@ -195,7 +206,18 @@ export function NotesPage() {
                   {editImages.length < 4 && (
                     <label className="quick-note__add">
                       +
-                      <input type="file" accept="image/*" multiple hidden onChange={(event) => { const files = event.currentTarget.files; event.currentTarget.value = ''; void uploadEdit(files) }} />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        hidden
+                        onChange={(event) => {
+                          const input = event.currentTarget
+                          const files = Array.from(input.files ?? [])
+                          input.value = ''
+                          void uploadEdit(files)
+                        }}
+                      />
                     </label>
                   )}
                 </div>
