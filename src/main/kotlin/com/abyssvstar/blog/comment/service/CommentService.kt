@@ -60,7 +60,19 @@ class CommentService(
 
     fun listAdmin(status: CommentStatus?, page: Int, size: Int): PageData<AdminCommentResponse> {
         val result = comments.pageAdmin(status, page, size)
-        return PageData.of(result.records.map { it.toAdmin() }, page, size, result.total)
+        val postTitles = posts.titlesByIds(result.records.mapNotNull { it.postId }.distinct())
+        val noteTitles = notes.titlesByIds(result.records.mapNotNull { it.noteId }.distinct())
+        return PageData.of(
+            result.records.map {
+                it.toAdmin(
+                    postTitle = it.postId?.let(postTitles::get),
+                    noteTitle = it.noteId?.let(noteTitles::get),
+                )
+            },
+            page,
+            size,
+            result.total,
+        )
     }
 
     fun stats(): CommentStatsResponse = CommentStatsResponse(
@@ -94,7 +106,7 @@ class CommentService(
         createdAt = createdAt,
     )
 
-    private fun Comment.toAdmin() = AdminCommentResponse(
+    private fun Comment.toAdmin(postTitle: String?, noteTitle: String?) = AdminCommentResponse(
         id = requireNotNull(id),
         postId = postId,
         noteId = noteId,
@@ -102,6 +114,8 @@ class CommentService(
         authorEmail = authorEmail,
         content = content,
         status = status,
+        postTitle = postTitle,
+        noteTitle = noteTitle,
         createdAt = createdAt,
         reviewedAt = reviewedAt,
     )

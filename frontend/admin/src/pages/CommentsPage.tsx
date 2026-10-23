@@ -67,7 +67,13 @@ export function CommentsPage() {
             <div className="comment-admin__head">
               <strong>{comment.authorName}</strong>
               <span className={`badge badge--${comment.status.toLowerCase()}`}>{comment.status}</span>
-              <span className="faint">{comment.postId ? `文章 #${comment.postId}` : comment.noteId ? `动态 #${comment.noteId}` : '站内留言'}</span>
+              <span className="faint">
+                {comment.postId
+                  ? `文章 · ${comment.postTitle?.trim() || `#${comment.postId}`}`
+                  : comment.noteId
+                    ? `动态 · ${comment.noteTitle?.trim() || `#${comment.noteId}`}`
+                    : '站内留言'}
+              </span>
             </div>
             <p>{comment.content}</p>
             <div className="comment-admin__meta">

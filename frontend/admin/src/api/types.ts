@@ -130,6 +130,8 @@ export interface CommentInfo {
   authorEmail?: string
   content: string
   status: CommentStatus
+  postTitle?: string
+  noteTitle?: string
   createdAt?: string
   reviewedAt?: string
 }

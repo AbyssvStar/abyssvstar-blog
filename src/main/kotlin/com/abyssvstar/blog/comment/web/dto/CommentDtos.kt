@@ -42,6 +42,8 @@ data class AdminCommentResponse(
     val authorEmail: String?,
     val content: String,
     val status: CommentStatus,
+    val postTitle: String?,
+    val noteTitle: String?,
     val createdAt: Instant?,
     val reviewedAt: Instant?,
 )

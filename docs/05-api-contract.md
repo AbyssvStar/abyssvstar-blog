@@ -213,7 +213,7 @@ Header: X-Export-Token: <token>
 | 媒体 | `POST /assets`（multipart 上传） | ✅ 内容嗅探 + 去重 + w400/w800 缩略图 + 落 MinIO |
 | 媒体·其余 | `GET /assets`、`DELETE /assets/{id}` | ✅ 删除保护引用；软删 7 天后清对象 |
 | 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | ✅ |
-| 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | ✅ |
+| 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | ✅ 列表一并返回关联文章 / 动态标题，已删内容仍用 ID 兜底 |
 | 站点配置 | `GET/PUT /site-config`、`POST /site-config/preview` | ✅ 站名 / 简介 / 关于页正文（Markdown）/ 封面图 / 头像；保存即记一条构建请求 |
 | 构建 | `GET /builds`、`POST /builds/trigger`（手动触发） | ✅ 10s 扫描 + 30s 防抖合并成一次 `repository_dispatch`；需 `BLOG_SITE_BUILD_ENABLED=true` + token 才真的发出去 |
 | 搜索 | `GET /search/status`、`POST /search/reindex` | ✅ ES 状态、积压数、全量重建；重建期间公开搜索走 PG |

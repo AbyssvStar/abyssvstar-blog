@@ -17,6 +17,15 @@ class NoteRepository(private val mapper: NoteMapper) {
 
     fun findByIdIncludingDeleted(id: Long): Note? = mapper.selectById(id)
 
+    fun titlesByIds(ids: Collection<Long>): Map<Long, String> {
+        if (ids.isEmpty()) return emptyMap()
+        return mapper.selectBatchIds(ids)
+            .mapNotNull { note ->
+                note.id?.let { it to note.content.lineSequence().firstOrNull().orEmpty().take(42) }
+            }
+            .toMap()
+    }
+
     fun findPublicByIds(ids: Collection<Long>): List<Note> {
         if (ids.isEmpty()) return emptyList()
         return mapper.selectList(PublishedNoteSpec.wrapper().`in`("id", ids))
