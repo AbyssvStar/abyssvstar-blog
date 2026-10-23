@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ViewCounter } from '@/components/ViewCounter'
+import { CommentSection } from '@/components/CommentSection'
 import { getNote, getNotes } from '@/lib/content'
 import { formatDate } from '@/lib/format'
 
@@ -42,6 +43,7 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
           </div>
         )}
       </article>
+      <CommentSection noteId={note.id} />
     </div>
   )
 }

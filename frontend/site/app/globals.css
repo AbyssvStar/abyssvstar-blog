@@ -616,8 +616,19 @@ button.chip:disabled {
 .md-body {
   font-size: 1.03rem;
   line-height: 1.85;
+  margin-inline: auto;
   max-width: var(--readw);
   overflow-wrap: break-word;
+  width: 100%;
+}
+
+.article__head,
+.prevnext,
+.license,
+.comments {
+  margin-inline: auto;
+  max-width: var(--readw);
+  width: 100%;
 }
 
 .md-body > * + * {
@@ -1378,6 +1389,7 @@ button.chip:disabled {
 
 /* ---------- 首页两栏 ---------- */
 .home-cols {
+  align-items: stretch;
   display: grid;
   gap: 2rem;
   grid-template-columns: minmax(0, 1fr) 18rem;
@@ -1393,6 +1405,72 @@ button.chip:disabled {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  height: 100%;
+}
+
+.home-notes-cell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.info-cell__head {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.info-cell__more {
+  font-size: 0.66rem;
+  margin-bottom: 0.7rem;
+}
+
+.home-note-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0;
+}
+
+.home-note-row {
+  flex: 1;
+  align-items: center;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
+  min-height: 3rem;
+  padding: 0.4rem 0.1rem;
+  transition: background 0.16s, color 0.16s;
+}
+
+.home-note-row:hover {
+  background: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
+  color: var(--text);
+}
+
+.home-note-row__date {
+  color: var(--text-faint);
+  font-size: 0.62rem;
+}
+
+.home-note-row__text {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-note-row img {
+  border-radius: 5px;
+  height: 2.4rem;
+  object-fit: cover;
+  width: 2.4rem;
 }
 
 .home-side .info-cell {

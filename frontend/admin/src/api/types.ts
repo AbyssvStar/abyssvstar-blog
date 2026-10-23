@@ -125,6 +125,7 @@ export type CommentStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SPAM'
 export interface CommentInfo {
   id: number
   postId?: number
+  noteId?: number
   authorName: string
   authorEmail?: string
   content: string

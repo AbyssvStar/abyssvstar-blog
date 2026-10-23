@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 interface Comment {
   id: number
   postId?: number
+  noteId?: number
   authorName: string
   content: string
   createdAt?: string
@@ -15,7 +16,7 @@ interface CommentPage {
   total: number
 }
 
-export function CommentSection({ postId }: { postId: number }) {
+export function CommentSection({ postId, noteId }: { postId?: number; noteId?: number }) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [authorName, setAuthorName] = useState('')
@@ -29,7 +30,8 @@ export function CommentSection({ postId }: { postId: number }) {
 
   useEffect(() => {
     let cancelled = false
-    void fetch(`/api/v1/comments?postId=${postId}&page=1&size=50`, { cache: 'no-store' })
+    const query = postId != null ? `postId=${postId}` : `noteId=${noteId}`
+    void fetch(`/api/v1/comments?${query}&page=1&size=50`, { cache: 'no-store' })
       .then((response) => response.json())
       .then((body: { code: number; data?: CommentPage }) => {
         if (!cancelled && body.code === 0) setComments(body.data?.items ?? [])
@@ -41,7 +43,7 @@ export function CommentSection({ postId }: { postId: number }) {
     return () => {
       cancelled = true
     }
-  }, [postId])
+  }, [noteId, postId])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -54,6 +56,7 @@ export function CommentSection({ postId }: { postId: number }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           postId,
+          noteId,
           authorName,
           authorEmail: email || undefined,
           content,
