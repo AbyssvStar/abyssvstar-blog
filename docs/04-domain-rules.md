@@ -68,7 +68,7 @@ status（生命周期，单选）          visibility（可见性，单选）
 | 规则 | 说明 |
 |------|------|
 | `DRAFT → SCHEDULED` | 必须提供**未来**的 `publish_at`，否则报 `PUBLISH_TIME_IN_PAST` |
-| `DRAFT → PUBLISHED` | 立即发布，`published_at = now()` |
+| `DRAFT → PUBLISHED` | 首次公开写入 `published_at = now()`；之后更新线上保留首发值，只刷新 `last_published_at` |
 | `SCHEDULED → PUBLISHED` | 只由定时任务执行，不由人工触发 |
 | `SCHEDULED → DRAFT` | 取消排期，清空 `publish_at` |
 | `PUBLISHED → ARCHIVED` | 保留快照，从所有列表和 sitemap 消失；`/posts/{slug}` 返回 410 |

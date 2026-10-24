@@ -52,6 +52,9 @@ class PublishService(
         }
 
         val now = Instant.now()
+        // 首次公开后，publishedAt 固定不动；lastPublishedAt 才记每次更新线上。
+        // 从未公开过的私密文章不占一个公开日期，等它第一次真正公开时再写。
+        val publishedAt = if (post.visibility == Visibility.PUBLIC) post.publishedAt ?: now else post.publishedAt
 
         if (post.visibility == Visibility.PRIVATE) {
             // 私密内容永不写入发布快照、永不触发构建。
@@ -61,12 +64,12 @@ class PublishService(
                 siteBuilds.requestBuild("post.became-private:$postId")
             }
         } else {
-            writeSnapshot(post, tagNames, now)
+            writeSnapshot(post, tagNames, requireNotNull(publishedAt))
             siteBuilds.requestBuild("post.published:$postId")
         }
 
         post.status = PostStatus.PUBLISHED
-        post.publishedAt = now
+        post.publishedAt = publishedAt
         post.lastPublishedAt = now
         post.publishAt = null
         if (!posts.update(post)) throw BusinessException(ErrorCode.CONFLICT)
@@ -171,7 +174,7 @@ class PublishService(
         return PreviewResponse(html, wordCount, TextMetrics.readingMinutes(wordCount))
     }
 
-    private fun writeSnapshot(post: Post, tagNames: List<String>, now: Instant) {
+    private fun writeSnapshot(post: Post, tagNames: List<String>, publishedAt: Instant) {
         val html = markdown.render(post.contentMd)
         val wordCount = TextMetrics.wordCount(post.contentMd)
 
@@ -189,7 +192,7 @@ class PublishService(
                 wordCount = wordCount,
                 readingMinutes = TextMetrics.readingMinutes(wordCount),
                 sourceHash = PostSourceHash.of(post, tagNames),
-                publishedAt = now,
+                publishedAt = publishedAt,
             ),
         )
     }
