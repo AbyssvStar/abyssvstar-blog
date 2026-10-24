@@ -39,7 +39,7 @@
 | `status`                    | text        | NOT NULL DEFAULT `'DRAFT'`   | `DRAFT` / `SCHEDULED` / `PUBLISHED` / `ARCHIVED` |
 | `visibility`                | text        | NOT NULL DEFAULT `'PUBLIC'`  | `PUBLIC` / `PRIVATE`                             |
 | `publish_at`                | timestamptz |                              | `SCHEDULED` 时的排期时间                               |
-| `published_at`              | timestamptz |                              | 对外生效时间（用于排序与 RSS）                                |
+| `published_at`              | timestamptz |                              | 首次公开发布时间；更新线上不改变，用于排序与 RSS                |
 | `last_published_at`         | timestamptz |                              | 最近一次点「发布」的时间                                     |
 | `view_count`                | bigint      | NOT NULL DEFAULT 0           | 聚合阅读量                                            |
 | `es_sync_status`            | text        | NOT NULL DEFAULT `'SKIPPED'` | `PENDING` / `SYNCED` / `FAILED` / `SKIPPED`      |
@@ -89,7 +89,7 @@ ALTER TABLE posts ADD CONSTRAINT posts_scheduled_ck
 | `word_count` | int | NOT NULL | |
 | `reading_minutes` | int | NOT NULL | |
 | `source_hash` | text | NOT NULL | 发布时工作副本的 sha256，用于判定"有未发布修改" |
-| `published_at` | timestamptz | NOT NULL | "更新线上"会刷新它 |
+| `published_at` | timestamptz | NOT NULL | 首次发布时写入；后续更新线上不改，只刷新 `updated_at` |
 | `created_at` / `updated_at` | timestamptz | | |
 
 ```sql
