@@ -542,7 +542,7 @@ button.chip:disabled {
 }
 
 .meta {
-  color: var(--text-faint);
+  color: var(--text-muted);
   display: flex;
   flex-wrap: wrap;
   font-family: var(--font-mono);
@@ -3577,6 +3577,10 @@ button.chip:disabled {
 
 .article__views {
   margin-top: 0.55rem;
+}
+
+.article__head .view-counter {
+  color: var(--text-muted);
 }
 
 .tag-cloud {
