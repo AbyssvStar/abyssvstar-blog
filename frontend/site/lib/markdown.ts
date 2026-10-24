@@ -41,7 +41,8 @@ function addHeadingIds(html: string): { html: string; headings: Heading[] } {
   const used = new Map<string, number>()
 
   const out = html.replace(/<h([23])>([\s\S]*?)<\/h\1>/g, (_whole, depth: string, inner: string) => {
-    const text = inner.replace(/<[^>]+>/g, '').trim()
+    // 正文由浏览器解析 HTML，目录拿到的却是纯文本；不解码会把 &quot; 原样显示出来。
+    const text = decodeEntities(inner.replace(/<[^>]+>/g, '')).trim()
     const base = slugifyHeading(text) || `section-${headings.length + 1}`
     const seen = used.get(base) ?? 0
     used.set(base, seen + 1)
