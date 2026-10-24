@@ -102,6 +102,58 @@ export interface AssetInfo {
   width?: number
   height?: number
   originalName?: string
+  variants?: Record<string, string>
+  createdAt?: string
+}
+
+export type NoteStatus = 'PUBLISHED' | 'ARCHIVED'
+
+export interface NoteInfo {
+  id: number
+  content: string
+  status: NoteStatus
+  visibility: Visibility
+  publishedAt: string
+  viewCount: number
+  images: AssetInfo[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type CommentStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SPAM'
+
+export interface CommentInfo {
+  id: number
+  postId?: number
+  noteId?: number
+  authorName: string
+  authorEmail?: string
+  content: string
+  status: CommentStatus
+  postTitle?: string
+  noteTitle?: string
+  createdAt?: string
+  reviewedAt?: string
+}
+
+export interface CommentStats {
+  total: number
+  pending: number
+  approved: number
+  rejected: number
+  spam: number
+}
+
+export interface AdminStats {
+  monthAiCost: number
+  monthAiCalls: number
+  monthAiCached: number
+  viewsLast7Days: number
+  publishedPosts: number
+  publishedNotes: number
+  pendingComments: number
+  heapUsedBytes: number
+  heapMaxBytes: number
 }
 
 /** POST /posts/slug-suggest 的返回 */

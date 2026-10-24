@@ -1,5 +1,6 @@
 package com.abyssvstar.blog.search.es
 
+import com.abyssvstar.blog.note.repository.NoteRepository
 import com.abyssvstar.blog.post.repository.PostPublicationRepository
 import com.abyssvstar.blog.post.repository.PostRepository
 import com.abyssvstar.blog.search.SearchHit
@@ -19,6 +20,7 @@ class ElasticsearchSearchReader(
     private val client: ElasticsearchHttpClient,
     private val posts: PostRepository,
     private val publications: PostPublicationRepository,
+    private val notes: NoteRepository,
     private val text: SearchTextExtractor,
     private val objectMapper: ObjectMapper,
 ) : SearchReader {
@@ -27,24 +29,46 @@ class ElasticsearchSearchReader(
 
     override fun search(query: String, page: Int, size: Int): SearchReaderPage {
         val hits = rawSearch(query, page, size)
-        val publicPosts = posts.findPublicByIds(hits.hits.map { it.id }).mapNotNull { post -> post.id?.let { it to post } }.toMap()
+        val postIds = hits.hits.filter { it.type == "POST" }.map { it.id }
+        val noteIds = hits.hits.filter { it.type == "NOTE" }.map { it.id }
+        val publicPosts = posts.findPublicByIds(postIds).mapNotNull { post -> post.id?.let { it to post } }.toMap()
         val pubMap = publications.findByPostIds(publicPosts.keys)
+        val publicNotes = notes.findPublicByIds(noteIds).mapNotNull { note -> note.id?.let { it to note } }.toMap()
 
-        // ES 只是候选来源，最终内容与可见性必须回到 PostgreSQL 的发布快照。
+        // ES 只是候选来源，最终内容与可见性必须回到 PostgreSQL 的公开数据。
         val items = hits.hits.mapNotNull { hit ->
-            val post = publicPosts[hit.id] ?: return@mapNotNull null
-            val pub = pubMap[hit.id] ?: return@mapNotNull null
-            SearchItem(
-                id = hit.id,
-                slug = pub.slug,
-                title = pub.title,
-                summaryHtml = text.cleanHighlight(hit.highlights["summary"])
-                    ?: text.excerptHtml(pub.summary, query),
-                bodySnippet = text.cleanHighlight(hit.highlights["body"])
-                    ?: text.excerptHtml(text.sourceText(pub), query),
-                tags = parseTags(pub.tags),
-                publishedAt = pub.publishedAt,
-            )
+            when (hit.type) {
+                "POST" -> {
+                    val post = publicPosts[hit.id] ?: return@mapNotNull null
+                    val pub = pubMap[hit.id] ?: return@mapNotNull null
+                    SearchItem(
+                        type = "POST",
+                        id = hit.id,
+                        slug = pub.slug,
+                        title = pub.title,
+                        summaryHtml = text.cleanHighlight(hit.highlights["summary"])
+                            ?: text.excerptHtml(pub.summary, query),
+                        bodySnippet = text.cleanHighlight(hit.highlights["body"])
+                            ?: text.excerptHtml(text.sourceText(pub), query),
+                        tags = parseTags(pub.tags),
+                        publishedAt = pub.publishedAt,
+                    )
+                }
+                "NOTE" -> {
+                    val note = publicNotes[hit.id] ?: return@mapNotNull null
+                    SearchItem(
+                        type = "NOTE",
+                        id = hit.id,
+                        slug = "",
+                        title = text.plainTitle(note.content).take(80),
+                        summaryHtml = text.excerptHtml(note.content, query),
+                        bodySnippet = null,
+                        tags = emptyList(),
+                        publishedAt = note.publishedAt,
+                    )
+                }
+                else -> null
+            }
         }
         return SearchReaderPage(items, hits.total)
     }
@@ -69,7 +93,6 @@ class ElasticsearchSearchReader(
                         ),
                     ),
                     "filter" to listOf(
-                        mapOf("term" to mapOf("docType" to "POST")),
                         mapOf("range" to mapOf("publishedAt" to mapOf("lte" to "now"))),
                     ),
                 ),
@@ -91,11 +114,14 @@ class ElasticsearchSearchReader(
         val root = objectMapper.readTree(raw)
         val total = root.path("hits").path("total").path("value").asLong(0)
         val hits = root.path("hits").path("hits").mapNotNull { hit ->
-            val id = hit.path("_id").asText().toLongOrNull() ?: return@mapNotNull null
+            val type = hit.path("_source").path("docType").asText("POST")
+            val rawId = hit.path("_id").asText()
+            val id = if (type == "NOTE") rawId.removePrefix("note:").toLongOrNull() else rawId.toLongOrNull()
+            id ?: return@mapNotNull null
             val highlights = hit.path("highlight").fields().asSequence().associate { (field, values) ->
                 field to (values.firstOrNull()?.asText().orEmpty())
             }
-            SearchHit(id, highlights)
+            SearchHit(type, id, highlights)
         }
         return SearchHitPage(hits, total)
     }

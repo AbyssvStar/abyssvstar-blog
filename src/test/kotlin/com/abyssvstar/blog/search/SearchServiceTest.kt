@@ -54,6 +54,7 @@ class SearchServiceTest {
             return SearchReaderPage(
                 items = listOf(
                     SearchItem(
+                        type = "POST",
                         id = if (source == SearchSource.ELASTICSEARCH) 1 else 2,
                         slug = "redis",
                         title = "Redis",

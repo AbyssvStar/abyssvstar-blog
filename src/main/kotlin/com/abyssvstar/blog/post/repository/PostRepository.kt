@@ -27,6 +27,11 @@ class PostRepository(private val mapper: PostMapper) {
     fun findPublicById(id: Long): Post? =
         mapper.selectOne(PublishedContentSpec.wrapper().eq("id", id))
 
+    fun titlesByIds(ids: Collection<Long>): Map<Long, String> {
+        if (ids.isEmpty()) return emptyMap()
+        return mapper.selectBatchIds(ids).mapNotNull { post -> post.id?.let { it to post.title } }.toMap()
+    }
+
     fun findPublicByIds(ids: Collection<Long>): List<Post> {
         if (ids.isEmpty()) return emptyList()
         return mapper.selectList(PublishedContentSpec.wrapper().`in`("id", ids))

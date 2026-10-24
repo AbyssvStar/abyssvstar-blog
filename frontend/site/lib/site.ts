@@ -17,6 +17,7 @@ export const site = {
   nav: [
     { href: '/', label: '首页' },
     { href: '/posts', label: '文章' },
+    { href: '/notes', label: '动态' },
     { href: '/archive', label: '归档' },
     { href: '/about', label: '关于' },
   ],

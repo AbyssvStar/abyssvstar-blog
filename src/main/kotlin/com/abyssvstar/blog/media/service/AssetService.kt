@@ -4,10 +4,14 @@ import com.abyssvstar.blog.media.domain.Asset
 import com.abyssvstar.blog.media.repository.AssetRepository
 import com.abyssvstar.blog.media.web.dto.AssetResponse
 import com.abyssvstar.blog.shared.storage.ObjectKeys
+import com.abyssvstar.blog.shared.web.PageData
 import com.abyssvstar.blog.shared.storage.ObjectStorage
 import com.abyssvstar.blog.shared.util.Hashing
 import com.abyssvstar.blog.shared.web.BusinessException
 import com.abyssvstar.blog.shared.web.ErrorCode
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.ObjectMapper
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -21,7 +25,11 @@ import org.springframework.transaction.annotation.Transactional
 class AssetService(
     private val assets: AssetRepository,
     private val storage: ObjectStorage,
+    private val variants: AssetVariantGenerator,
+    private val objectMapper: ObjectMapper,
 ) {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     /**
      * 校验 + 去重 + 落对象存储 + 落库。
@@ -50,6 +58,19 @@ class AssetService(
 
         val key = ObjectKeys.newKey(image.extension)
         storage.put(key, bytes, image.mime)
+        // 缩略图是增强，不是上传成功的前提；对象存储单张写失败时保留原图即可。
+        val variantPaths = buildMap {
+            variants.generate(key, bytes, image.mime, image.width, image.height).forEach { (label, variant) ->
+                runCatching {
+                    storage.put(
+                        variant.objectName,
+                        variant.bytes,
+                        if (variant.objectName.endsWith(".png")) "image/png" else "image/jpeg",
+                    )
+                    put(label, variant.objectName)
+                }.onFailure { ex -> log.warn("缩略图上传失败 object={} label={}", key, label, ex) }
+            }
+        }
 
         val asset = Asset(
             path = key,
@@ -59,9 +80,26 @@ class AssetService(
             width = image.width,
             height = image.height,
             sha256 = sha,
+            variants = objectMapper.writeValueAsString(variantPaths),
         )
         assets.insert(asset)
         return asset.toResponse()
+    }
+
+    fun findActiveByIds(ids: Collection<Long>): Map<Long, AssetResponse> =
+        assets.findActiveByIds(ids).mapNotNull { asset -> asset.id?.let { it to asset.toResponse() } }.toMap()
+
+    fun list(page: Int, size: Int): PageData<AssetResponse> {
+        val result = assets.pageActive(page, size)
+        return PageData.of(result.records.map { it.toResponse() }, page, size, result.total)
+    }
+
+    /** 删除只做软删；对象文件留给七天清理任务，避免静态缓存和误删立刻裂图。 */
+    @Transactional
+    fun delete(id: Long) {
+        assets.findActiveById(id) ?: throw BusinessException(ErrorCode.ASSET_NOT_FOUND)
+        if (assets.referenceCount(id) > 0) throw BusinessException(ErrorCode.ASSET_IN_USE)
+        assets.softDelete(id)
     }
 
     /** assetId → 能直接写进 HTML 的公开 URL。查不到（或已软删）就是 null。 */
@@ -76,7 +114,13 @@ class AssetService(
         width = width,
         height = height,
         originalName = originalName,
+        variants = parseVariants(variants).mapValues { (_, objectName) -> storage.publicUrl(objectName) },
+        createdAt = createdAt,
     )
+
+    private fun parseVariants(json: String): Map<String, String> =
+        runCatching { objectMapper.readValue(json, object : TypeReference<Map<String, String>>() {}) }
+            .getOrDefault(emptyMap())
 
     private companion object {
         /** 和 `assets.size_bytes` 的约束一致；servlet 层还有一道同样口径的限制 */

@@ -9,7 +9,6 @@ import java.time.Instant
  */
 data class ExportPayload(
     val posts: List<ExportPost>,
-    /** 短动态模块还没做，恒为空数组 */
     val notes: List<ExportNote>,
     /** 由已发布文章的标签快照去重统计得来 */
     val tags: List<ExportTag>,
@@ -18,6 +17,7 @@ data class ExportPayload(
 )
 
 data class ExportPost(
+    val id: Long,
     val slug: String,
     val title: String,
     val summary: String,
@@ -33,6 +33,15 @@ data class ExportNote(
     val id: Long,
     val content: String,
     val publishedAt: Instant?,
+    val images: List<ExportNoteImage> = emptyList(),
+)
+
+data class ExportNoteImage(
+    val id: Long,
+    val url: String,
+    val width: Int?,
+    val height: Int?,
+    val variants: Map<String, String> = emptyMap(),
 )
 
 data class ExportTag(

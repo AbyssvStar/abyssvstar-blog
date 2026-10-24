@@ -6,6 +6,7 @@ import com.abyssvstar.blog.shared.web.ErrorCode
 import com.abyssvstar.blog.taxonomy.domain.Tag
 import com.abyssvstar.blog.taxonomy.repository.PostTagMapper
 import com.abyssvstar.blog.taxonomy.repository.TagMapper
+import com.abyssvstar.blog.taxonomy.web.dto.TagAdminResponse
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -33,6 +34,28 @@ class TagService(
             val tag = findOrCreate(name)
             postTags.link(postId, requireNotNull(tag.id))
         }
+    }
+
+    fun list(): List<TagAdminResponse> {
+        val counts = postTags.countByTag().associate { it.tagId to it.count }
+        return tags.selectList(QueryWrapper<Tag>().orderByAsc("name")).mapNotNull { tag ->
+            tag.id?.let { id ->
+                TagAdminResponse(
+                    id = id,
+                    name = tag.name,
+                    slug = tag.slug,
+                    postCount = counts[id] ?: 0,
+                )
+            }
+        }
+    }
+
+    /** 只删关联和标签本身；文章、发布快照一律不动。 */
+    @Transactional
+    fun delete(id: Long) {
+        tags.selectById(id) ?: throw BusinessException(ErrorCode.NOT_FOUND, "标签不存在")
+        postTags.unlinkByTag(id)
+        tags.deleteById(id)
     }
 
     /** 单篇文章的标签名，按名称排序保证输出稳定。 */
