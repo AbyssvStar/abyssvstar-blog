@@ -23,16 +23,31 @@ class PostgresSearchReader(
         val rows = mapper.search(query, pattern, size, (page - 1) * size)
         val total = mapper.count(pattern)
         val items = rows.map { row ->
-            val publication = PostPublication(contentMd = row.contentMd, html = row.html)
-            SearchItem(
-                id = row.postId,
-                slug = row.slug,
-                title = row.title,
-                summaryHtml = text.excerptHtml(row.summary, query),
-                bodySnippet = text.excerptHtml(text.sourceText(publication), query),
-                tags = parseTags(row.tags),
-                publishedAt = row.publishedAt,
-            )
+            when (row.type) {
+                "NOTE" -> SearchItem(
+                    type = "NOTE",
+                    id = row.contentId,
+                    slug = "",
+                    title = text.plainTitle(row.contentMd.orEmpty()).take(80),
+                    summaryHtml = text.excerptHtml(row.contentMd.orEmpty(), query),
+                    bodySnippet = null,
+                    tags = emptyList(),
+                    publishedAt = row.publishedAt,
+                )
+                else -> {
+                    val publication = PostPublication(contentMd = row.contentMd, html = row.html)
+                    SearchItem(
+                        type = "POST",
+                        id = row.contentId,
+                        slug = row.slug,
+                        title = row.title,
+                        summaryHtml = text.excerptHtml(row.summary, query),
+                        bodySnippet = text.excerptHtml(text.sourceText(publication), query),
+                        tags = parseTags(row.tags),
+                        publishedAt = row.publishedAt,
+                    )
+                }
+            }
         }
         return SearchReaderPage(items, total)
     }

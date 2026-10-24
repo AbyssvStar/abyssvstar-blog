@@ -20,6 +20,10 @@ const nextConfig = {
   },
   // 构建产物里不要留 source map，省得把源码结构发到线上
   productionBrowserSourceMaps: false,
+  experimental: {
+    // 只在安装版本受安全公告影响时提示升级
+    agentUpgrade: 'security',
+  },
   // 线上由 Nginx 把 /api/v1 转给后端；本地 next dev 没有 Nginx，需要同源代理。
   // 只在 development 挂 rewrites，静态导出构建时这个属性根本不会出现。
   ...devProxy,

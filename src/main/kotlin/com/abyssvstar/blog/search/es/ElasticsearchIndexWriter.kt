@@ -1,7 +1,9 @@
 package com.abyssvstar.blog.search.es
 
+import com.abyssvstar.blog.note.domain.Note
 import com.abyssvstar.blog.post.domain.PostPublication
 import com.abyssvstar.blog.search.MarkdownChunkSplitter
+import com.abyssvstar.blog.shared.util.Hashing
 import com.abyssvstar.blog.search.SearchProperties
 import com.abyssvstar.blog.search.SearchTextExtractor
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -71,6 +73,40 @@ class ElasticsearchIndexWriter(
                 throw IllegalStateException("ES bulk 写入存在失败项：${response.take(500)}")
             }
         }
+    }
+
+    fun indexNote(note: Note) {
+        indices.ensureIndices()
+        val id = requireNotNull(note.id)
+        val content = note.content.trim()
+        val document = mapOf(
+            "docType" to "NOTE",
+            "contentId" to id,
+            "slug" to "note-$id",
+            "title" to content.lineSequence().firstOrNull()?.take(80).orEmpty().ifBlank { "短动态 #$id" },
+            "summary" to "",
+            "body" to content,
+            "tags" to emptyList<String>(),
+            "publishedAt" to note.publishedAt.toString(),
+            "viewCount" to note.viewCount,
+            "contentHash" to Hashing.sha256Hex(content),
+        )
+        client.request(
+            "PUT",
+            "/${props.articleIndex}/_doc/note:$id?refresh=wait_for",
+            client.json(document),
+            timeout = props.indexTimeout,
+        )
+    }
+
+    fun deleteNote(noteId: Long) {
+        indices.ensureIndices()
+        client.request(
+            "DELETE",
+            "/${props.articleIndex}/_doc/note:$noteId?refresh=wait_for",
+            allowNotFound = true,
+            timeout = props.indexTimeout,
+        )
     }
 
     fun delete(postId: Long) {

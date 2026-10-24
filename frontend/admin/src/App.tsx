@@ -5,6 +5,10 @@ import { LoginPage } from './pages/LoginPage'
 import { PostListPage } from './pages/PostListPage'
 import { EditorPage } from './pages/EditorPage'
 import { SiteConfigPage } from './pages/SiteConfigPage'
+import { NotesPage } from './pages/NotesPage'
+import { CommentsPage } from './pages/CommentsPage'
+import { MediaPage } from './pages/MediaPage'
+import { StatsPage } from './pages/StatsPage'
 import { applyTheme, currentTheme, type Theme } from './theme'
 
 export function App() {
@@ -61,8 +65,7 @@ export function App() {
 
 function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
   const [busy, setBusy] = useState(false)
-  // 页面就三个，用状态做路由就够了。再多起来就该引 react-router 了
-  const [view, setView] = useState<'posts' | 'site'>('posts')
+  const [view, setView] = useState<'posts' | 'notes' | 'comments' | 'media' | 'stats' | 'site'>('posts')
   const [editingId, setEditingId] = useState<number | null>(null)
 
   async function logout() {
@@ -96,6 +99,10 @@ function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
             文章
           </button>
           {editingId !== null && <span className="nav__item nav__item--active">编辑中</span>}
+          <button className={`nav__item${view === 'notes' ? ' nav__item--active' : ''}`} onClick={() => { setView('notes'); setEditingId(null) }}>动态</button>
+          <button className={`nav__item${view === 'comments' ? ' nav__item--active' : ''}`} onClick={() => { setView('comments'); setEditingId(null) }}>留言</button>
+          <button className={`nav__item${view === 'media' ? ' nav__item--active' : ''}`} onClick={() => { setView('media'); setEditingId(null) }}>媒体</button>
+          <button className={`nav__item${view === 'stats' ? ' nav__item--active' : ''}`} onClick={() => { setView('stats'); setEditingId(null) }}>统计</button>
           <button
             className={`nav__item${view === 'site' ? ' nav__item--active' : ''}`}
             onClick={() => {
@@ -110,7 +117,7 @@ function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
 
       <div className="main">
         <header className="topbar">
-          <span className="topbar__title">{editingId !== null ? '编辑文章' : view === 'site' ? '站点' : '文章'}</span>
+          <span className="topbar__title">{editingId !== null ? '编辑文章' : TITLES[view]}</span>
           <div className="topbar__right">
             <ThemeToggle />
             <span className="muted" style={{ fontSize: 13 }}>
@@ -125,6 +132,14 @@ function Shell({ me, onLoggedOut }: { me: Me; onLoggedOut: () => void }) {
         <div className="content">
           {editingId !== null ? (
             <EditorPage postId={editingId} onBack={() => setEditingId(null)} />
+          ) : view === 'notes' ? (
+            <NotesPage />
+          ) : view === 'comments' ? (
+            <CommentsPage />
+          ) : view === 'media' ? (
+            <MediaPage />
+          ) : view === 'stats' ? (
+            <StatsPage />
           ) : view === 'site' ? (
             <SiteConfigPage />
           ) : (
@@ -150,4 +165,13 @@ function ThemeToggle() {
       {theme === 'dark' ? '☾ 深色' : '☀ 浅色'}
     </button>
   )
+}
+
+const TITLES: Record<'posts' | 'notes' | 'comments' | 'media' | 'stats' | 'site', string> = {
+  posts: '文章',
+  notes: '动态',
+  comments: '留言',
+  media: '媒体',
+  stats: '统计',
+  site: '站点',
 }

@@ -11,7 +11,8 @@ import { CodeCopy } from '@/components/CodeCopy'
 import { ImageZoom } from '@/components/ImageZoom'
 import { BackToTop } from '@/components/BackToTop'
 import { Toc } from '@/components/Toc'
-
+import { ViewCounter } from '@/components/ViewCounter'
+import { CommentSection } from '@/components/CommentSection'
 
 export const dynamicParams = false
 
@@ -88,6 +89,9 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           <header className="article__head">
             <h1 className="article__title">{post.title}</h1>
             <PostMeta post={post} />
+            <div className="article__views">
+              <ViewCounter type="POST" id={post.id} />
+            </div>
           </header>
 
           <div className="md-body" id="post-body" dangerouslySetInnerHTML={{ __html: html }} />
@@ -129,6 +133,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             </div>
             {site.license}
           </footer>
+
+          <CommentSection postId={post.id} variant="card" />
         </div>
       </article>
     </>

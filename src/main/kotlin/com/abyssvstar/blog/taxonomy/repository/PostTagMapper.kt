@@ -24,6 +24,9 @@ interface PostTagMapper {
     @Select("SELECT tag_id FROM post_tags WHERE post_id = #{postId}")
     fun findTagIds(@Param("postId") postId: Long): List<Long>
 
+    @Select("SELECT tag_id, count(*) FROM post_tags GROUP BY tag_id")
+    fun countByTag(): List<TagCount>
+
     @Select(
         """
         <script>
@@ -40,4 +43,9 @@ interface PostTagMapper {
 data class PostTagLink(
     var postId: Long = 0,
     var tagId: Long = 0,
+)
+
+data class TagCount(
+    var tagId: Long = 0,
+    var count: Long = 0,
 )

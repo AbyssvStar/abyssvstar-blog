@@ -190,14 +190,14 @@ Header: X-Export-Token: <token>
 |------|------|:--:|------|
 | GET | `/posts` | ✅ | 文章列表（分页，可按 `tag` / `year` / `month` 过滤） |
 | GET | `/posts/{slug}` | ✅ | 文章详情（含上下篇）。相关文章属于 G5 的 AI 那批 |
-| GET | `/notes` | 🚧 | 短动态流（分页） |
-| GET | `/notes/{id}` | 🚧 | 单条动态 |
+| GET | `/notes` | ✅ | 短动态流（分页，仅公开内容） |
+| GET | `/notes/{id}` | ✅ | 单条公开动态（含配图） |
 | GET | `/tags` | ❌ | **刻意不做**：静态站构建时用 `/export` 拿标签，多一个公开入口只会多一处要维护、要限流、要保持一致性的地方 |
 | GET | `/archive` | 🚧 | 独立归档统计接口，当前公开站直接基于 `/export` 在构建期生成归档页 |
 | GET | `/search?q=` | ✅ | 搜索（ES 主，PG 降级；降级返回 HTTP 200 + code 60001） |
-| POST | `/views` | 🚧 | 阅读量打点（**幂等、永不报错、返回 204**） |
-| GET | `/comments?postId=` | 🚧 | 已审核留言 |
-| POST | `/comments` | 🚧 | 提交留言（默认 `PENDING`） |
+| POST | `/views` | ✅ | 阅读量打点（**幂等、永不报错、返回 204**） |
+| GET | `/comments?postId=` 或 `?noteId=` | ✅ | 已审核留言；`postId` / `noteId` 二选一 |
+| POST | `/comments` | ✅ | 提交文章/动态留言（默认 `PENDING`；蜜罐 / 耗时 / 限流） |
 | GET | `/export` | ✅ | 全量导出（Token 鉴权；带 ETag，内容没变回 304） |
 
 > **RSS / sitemap 不在后端** —— 由 Next.js 在构建时生成，零运行时开销。
@@ -209,15 +209,15 @@ Header: X-Export-Token: <token>
 | 认证 | `POST /auth/login`、`POST /auth/logout`、`GET /auth/me` | ✅ |
 | 文章 | `GET/POST /posts`、`GET/PATCH/DELETE /posts/{id}`、`POST /posts/{id}/publish`、`/archive`、`/restore`、`/preview`、`POST /posts/slug-suggest` | ✅ |
 | 文章·排期 | `POST /posts/{id}/schedule`、`/cancel-schedule` | ✅ 每分钟扫描，到点自动发布 |
-| 动态 | `GET/POST /notes`、`GET/PATCH/DELETE /notes/{id}`、`POST /notes/{id}/archive`、`/restore` | 🚧 |
-| 媒体 | `POST /assets`（multipart 上传） | ✅ 只做了上传：内容嗅探 + 内容去重 + 落 MinIO，暂无缩略图 |
-| 媒体·其余 | `GET /assets`、`DELETE /assets/{id}` | 🚧 |
-| 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | 🚧 |
-| 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | 🚧 |
+| 动态 | `GET/POST /notes`、`GET/PATCH/DELETE /notes/{id}`、`POST /notes/{id}/archive`、`/restore` | ✅ |
+| 媒体 | `POST /assets`（multipart 上传） | ✅ 内容嗅探 + 去重 + w400/w800 缩略图 + 落 MinIO |
+| 媒体·其余 | `GET /assets`、`DELETE /assets/{id}` | ✅ 删除保护引用；软删 7 天后清对象 |
+| 标签 | `GET /tags`、`DELETE /tags/{id}`（新建走"保存文章时按名称自动创建"，不单独开接口） | ✅ |
+| 留言 | `GET /comments?status=`、`GET /comments/stats`、`POST /comments/{id}/approve`、`/reject`、`/spam`、`/pending`、`DELETE /comments/{id}` | ✅ 列表一并返回关联文章 / 动态标题，已删内容仍用 ID 兜底 |
 | 站点配置 | `GET/PUT /site-config`、`POST /site-config/preview` | ✅ 站名 / 简介 / 关于页正文（Markdown）/ 封面图 / 头像；保存即记一条构建请求 |
 | 构建 | `GET /builds`、`POST /builds/trigger`（手动触发） | ✅ 10s 扫描 + 30s 防抖合并成一次 `repository_dispatch`；需 `BLOG_SITE_BUILD_ENABLED=true` + token 才真的发出去 |
 | 搜索 | `GET /search/status`、`POST /search/reindex` | ✅ ES 状态、积压数、全量重建；重建期间公开搜索走 PG |
-| 统计 | `GET /stats`（阅读量 / AI 成本 / 内存快照） | 🚧 待做 |
+| 统计 | `GET /stats`（阅读量 / AI 成本 / 内存快照） | ✅ 骨架 |
 | AI | `POST /ai/summary`、`/ai/tags`、`/ai/related` | 🚧 G5 |
 
 ### 7.3 实时预览端点（`POST /admin/api/posts/{id}/preview`）

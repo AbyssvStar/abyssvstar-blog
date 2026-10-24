@@ -6,6 +6,7 @@ import { site } from './site'
  * 只在构建时跑一次，拿到的就是「发布快照」的全量，静态站和 ES 都读同一份，天然一致。
  */
 export interface ExportPost {
+  id: number
   slug: string
   title: string
   summary: string
@@ -17,10 +18,19 @@ export interface ExportPost {
   publishedAt?: string
 }
 
+export interface ExportNoteImage {
+  id: number
+  url: string
+  width?: number
+  height?: number
+  variants?: Record<string, string>
+}
+
 export interface ExportNote {
   id: number
   content: string
   publishedAt?: string
+  images: ExportNoteImage[]
 }
 
 export interface ExportTag {
@@ -164,6 +174,21 @@ export async function getNeighbours(slug: string): Promise<{ prev?: ExportPost; 
   const index = posts.findIndex((p) => p.slug === slug)
   if (index < 0) return {}
   return { prev: posts[index + 1], next: posts[index - 1] }
+}
+
+export async function getNotes(): Promise<ExportNote[]> {
+  const { notes } = await loadContent()
+  return [...notes].sort((a, b) => time(b.publishedAt) - time(a.publishedAt))
+}
+
+export async function getNote(id: number): Promise<ExportNote | undefined> {
+  return (await getNotes()).find((note) => note.id === id)
+}
+
+export async function getPostsByTagSlug(slug: string): Promise<{ tag: ExportTag; posts: ExportPost[] } | undefined> {
+  const tag = (await getTags()).find((item) => item.slug === slug)
+  if (!tag) return undefined
+  return { tag, posts: await getPostsByTag(tag.name) }
 }
 
 export async function getTags(): Promise<ExportTag[]> {

@@ -19,7 +19,8 @@ export default async function HomePage() {
     getSiteConfig(),
   ])
   const latest = posts.slice(0, 6)
-  const notes = content.notes.slice(0, 4)
+  const notes = content.notes.slice(0, 3)
+  const hasMoreNotes = content.notes.length > notes.length
 
 
   return (
@@ -50,7 +51,7 @@ export default async function HomePage() {
       </section>
 
 
-      <section className="wrap section">
+      <section id="latest" className="wrap section">
         <div className="home-cols">
           <div>
             <div className="section__head">
@@ -64,22 +65,30 @@ export default async function HomePage() {
 
           <aside className="home-side">
 
-            <div className="info-cell">
-              <div className="info-cell__label">最近动态</div>
-              {content.notes.length > 0 ? (
-                // 用 details/summary 做"点开"，横向可滑 —— 都不需要 JS
-                <div className="notes-strip">
-                  {content.notes.slice(0, 6).map((note) => (
-                    <details key={note.id} className="note">
-                      <summary>{formatDate(note.publishedAt)}</summary>
-                      <p>{note.content}</p>
-                    </details>
+            <div className="info-cell home-notes-cell">
+              <div className="info-cell__head">
+                <div className="info-cell__label">最近动态</div>
+              </div>
+              {notes.length > 0 ? (
+                <div className="home-note-list">
+                  {notes.map((note) => (
+                    <Link key={note.id} href={`/notes/${note.id}/`} className="home-note-row">
+                      <span className="home-note-row__date mono">{formatDate(note.publishedAt)}</span>
+                      <span className="home-note-row__text">{note.content}</span>
+                      {note.images[0] && (
+                        <img src={note.images[0].variants?.w400 ?? note.images[0].url} alt="" loading="lazy" />
+                      )}
+                    </Link>
                   ))}
+                  {hasMoreNotes && (
+                    <Link href="/notes/" className="home-note-more">
+                      更多动态
+                      <span aria-hidden="true">→</span>
+                    </Link>
+                  )}
                 </div>
               ) : (
-                <p className="faint" style={{ fontSize: '0.85rem', margin: 0 }}>
-                  还没有短动态。
-                </p>
+                <p className="faint" style={{ fontSize: '0.85rem', margin: 0 }}>还没有短动态。</p>
               )}
             </div>
 
@@ -90,7 +99,7 @@ export default async function HomePage() {
                   // 用得越多字号越大
                   <Link
                     key={tag.slug}
-                    href={`/posts/?tag=${encodeURIComponent(tag.name)}`}
+                    href={`/tags/${tag.slug}/`}
                     className="chip"
                     style={{ fontSize: `${(0.78 + Math.min(tag.count, 10) * 0.17).toFixed(2)}rem` }}
                   >
@@ -103,23 +112,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {notes.length > 0 && (
-        <section className="wrap section">
-          <div className="section__head">
-            <div className="section__title">最近动态</div>
-          </div>
-          <div className="list">
-            {notes.map((note) => (
-              <div key={note.id} className="list__item">
-                <span className="list__date">{formatDate(note.publishedAt)}</span>
-                <span className="muted" style={{ fontSize: '0.92rem' }}>
-                  {note.content}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* 这里不写「站是怎么搭的」：那是文章的内容，等写出来再链过去（关于页里留了位置） */}
       <section className="wrap section">
